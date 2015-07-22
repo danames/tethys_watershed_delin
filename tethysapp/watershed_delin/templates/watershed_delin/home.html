@@ -1,0 +1,67 @@
+{% extends "watershed_delin/base.html" %}
+
+{% load tethys_gizmos %}
+{% load staticfiles %}
+
+{% block app_navigation_items %}
+
+
+{% gizmo text_input txtLocation %}
+
+{% gizmo button btnSearch %}
+
+<hr>
+
+<div id="search_output"></div>
+
+<hr>
+
+{% gizmo button btnDelineate %}
+
+<hr>
+
+<div id="delineation_output"></div>
+
+<hr>
+
+{% gizmo button btnDownload %}
+
+
+
+
+
+
+{% endblock %}
+
+
+{% block app_content %}
+  <p><strong>Instructions:</strong> Search for a location and/or click the map to identify a watershed outlet and stream reach of interest.
+    Then click the "Delineate Watershed" button.</p>
+
+{% gizmo map_view map_options %}
+
+ <p><strong>Note:</strong> This app uses the United States
+    <a href='http://water.epa.gov/scitech/datait/tools/waters/services/' target="_blank">EPA WATERS Web and Database Services</a>
+    and only works for watersheds and drainages in the continental United States and Hawaii. </p>
+
+<p>Remaining Tasks:</p>
+<ol>
+    <li>Make sure Tethys is using local ol.js for faster loading</li>
+    <li>Create simple tutorial page</li>
+    <li>Provide option to store results in HydroShare using Python API</li>
+    <li>Provide popup hover info boxes on all features</li>
+    <li>On hover on the "Location Search" provide some examples (or default show them in the text box)</li>
+    <li>Make a better icon</li>
+    <li>Provide copyright and contanct info</li>
+    <li>Determine if it is possible to delineate from the location of the measure instead of end of feature.</li>
+</ol>
+
+{% endblock %}
+
+
+{% block scripts %}
+  {{ block.super }}
+  <script src="{% static 'watershed_delin/js/map.js' %}"></script>
+  <script src="{% static 'watershed_delin/js/WATERSServices-1.0.0-min.js' %}"></script>
+  <script src='http://maps.google.com/maps?file=api&amp;v=2&amp;key=ABQIAAAAjpkAC9ePGem0lIq5XcMiuhR_wWLPFku8Ix9i2SXYRVK3e45q1BQUd_beF8dtzKET_EteAjPdGDwqpQ'></script>
+{% endblock %}
