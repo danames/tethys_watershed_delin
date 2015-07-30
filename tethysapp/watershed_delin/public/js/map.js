@@ -458,14 +458,16 @@ function run_geocoder() {
 
 function geocoder_success(results, status) {
     if (status == google.maps.GeocoderStatus.OK) {
+        r=results;
         flag_geocoded=true;
-        Lat = results[0].geometry.location.A;
-        Lon = results[0].geometry.location.F;
+        Lat = results[0].geometry.location.lat();
+        Lon = results[0].geometry.location.lng();
 
         var dbPoint = {
             "type": "Point",
             "coordinates": [Lon, Lat]
         }
+
         var coords = ol.proj.transform(dbPoint.coordinates, 'EPSG:4326','EPSG:3857');
         addClickPoint(coords);
         CenterMap(Lat,Lon);
