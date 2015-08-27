@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from tethys_gizmos.gizmo_options import MapView, MVLayer, MVView
-from tethys_apps.sdk.gizmos import Button, TextInput
+from tethys_apps.sdk.gizmos import Button, TextInput,SelectInput
+
 
 def home(request):
     """
@@ -23,6 +24,13 @@ def home(request):
 
 
      # Pre-populate lat-picker and lon_picker from model
+    select_input = SelectInput(display_text='Basemap',
+                            name='select_input',
+                            multiple=False,
+                            options=[('Bing', 'bing_layer'), ('MapQuest', 'mapQuest_layer'), ('OpenStreet', 'openstreet_layer'), ('Stamen', 'stamen_layer')],
+                            original=['Bing'],
+                           attributes="id=selectInput onchange=run_select_basemap()")
+
     txtLocation = TextInput(display_text='Location Search:',
                     name="txtLocation",
                     initial="",
@@ -46,6 +54,7 @@ def home(request):
 
     # Pass variables to the template via the context dictionary
     context = {'map_options': map_options,
+               'select_input':select_input,
                'txtLocation':txtLocation,
                'btnSearch':btnSearch,
                'btnDelineate':btnDelineate,

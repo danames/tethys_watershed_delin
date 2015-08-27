@@ -5,6 +5,7 @@
 
 {% block app_navigation_items %}
 
+{% gizmo select_input select_input %}
 
 {% gizmo text_input txtLocation %}
 
@@ -26,17 +27,14 @@
 
 {% gizmo button btnDownload %}
 
-
-
-
-
-
 {% endblock %}
 
 
 {% block app_content %}
   <p><strong>Instructions:</strong> Search for a location and/or click the map to identify a watershed outlet and stream reach of interest.
     Then click the "Delineate Watershed" button.</p>
+
+
 
 {% gizmo map_view map_options %}
 
