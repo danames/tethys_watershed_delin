@@ -3,6 +3,7 @@ var map, start_point_layer, click_point_layer, end_point_layer, indexing_path_la
 var basin_layer, streams_layer;
 var flag_geocoded;
 
+var baseMapLayer=null;
 
 //variables related to the delineation process
 var comid, fmeasure, reach_code, gnis_name, wbd_huc12;
@@ -23,18 +24,41 @@ $(document).ready(function () {
     });
 
 */
+    //Set basemap dropdownbox initial display as 'Bing'
+    dropdown_obj=document.getElementById("select_input");
+    dropdown_obj.selectedIndex=0;
+
     map = TETHYS_MAP_VIEW.getMap();
 
-    //remove the default open streetmap that Tethys adds.
+    //remove the default openstreetmap that Tethys adds.
     map.getLayers().clear();
 
     //build the bing map layer
 	bing_layer = new ol.layer.Tile({
+
 		source: new ol.source.BingMaps({
 			imagerySet: 'AerialWithLabels',
 			key: 'Ak-dzM4wZjSqTlzveKz5u0d4IQ4bRzVI309GxmkgSVr1ewS6iPSrOvOKhA-CJlm3'
 		})
 	});
+
+    //build OpenStreet map layer
+    openstreet_layer = new ol.layer.Tile({
+          source: new ol.source.OSM()
+        });
+
+    //build MapQuest map layer
+    mapQuest_layer = new ol.layer.Tile({
+        source: new ol.source.MapQuest({layer: 'sat'})
+                 });
+
+    //build Stamen map layer
+    stamen_layer = new ol.layer.Tile({
+        source:new ol.source.Stamen({
+    layer: "toner-lite",
+    url: "https://stamen-tiles-{a-d}.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}.png"
+        })
+    });
 
     click_point_layer = new ol.layer.Vector({
       source: new ol.source.Vector(),
@@ -72,7 +96,7 @@ $(document).ready(function () {
                 })
             })
         })
-    })
+    });
 
     end_point_layer = new ol.layer.Vector({
         source: new ol.source.Vector(),
@@ -91,7 +115,7 @@ $(document).ready(function () {
                 })
             })
         })
-    })
+    });
 
     indexing_path_layer = new ol.layer.Vector({
         source: new ol.source.Vector(),
@@ -110,7 +134,7 @@ $(document).ready(function () {
                 })
             })
         })
-    })
+    });
 
     flow_lines_layer = new ol.layer.Vector({
         source: new ol.source.Vector(),
@@ -129,7 +153,7 @@ $(document).ready(function () {
                 })
             })
         })
-    })
+    });
 
     basin_layer = new ol.layer.Vector({
         source: new ol.source.Vector(),
@@ -148,7 +172,7 @@ $(document).ready(function () {
                 })
             })
         })
-    })
+    });
 
     streams_layer = new ol.layer.Vector({
         source: new ol.source.Vector(),
@@ -167,9 +191,11 @@ $(document).ready(function () {
                 })
             })
         })
-    })
+    });
 
-    map.addLayer(bing_layer);
+    //set bing map as base map
+    baseMapLayer=bing_layer;
+    map.addLayer(baseMapLayer);
     map.addLayer(click_point_layer);
     map.addLayer(start_point_layer);
     map.addLayer(end_point_layer);
@@ -195,6 +221,41 @@ $(document).ready(function () {
     })
 
 });
+
+
+//select a basemap you want
+function run_select_basemap() {
+
+    dropdown_obj=document.getElementById("select_input");
+    selected_index=dropdown_obj.selectedIndex;
+    selected_value=dropdown_obj.options[selected_index].value;
+
+    new_baseMapLayer=null;
+    if (selected_value == "bing_layer")
+    {
+        new_baseMapLayer=bing_layer
+    }
+    else if (selected_value == "mapQuest_layer")
+    {
+        new_baseMapLayer=mapQuest_layer;
+    }
+    else if(selected_value=="openstreet_layer")
+    {
+        new_baseMapLayer=openstreet_layer;
+    }
+     else if(selected_value=="stamen_layer")
+    {
+        new_baseMapLayer=stamen_layer;
+    }
+
+    //remove base map layer
+    //insert selected layer as basemap
+    map.removeLayer(baseMapLayer);
+    map.getLayers().insertAt(0, new_baseMapLayer);
+    baseMapLayer=new_baseMapLayer
+
+
+    }
 
 function find_current_location() {
     //var lat = 40.2380;
