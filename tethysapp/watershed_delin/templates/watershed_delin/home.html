@@ -26,6 +26,10 @@
 <hr>
 
 {% gizmo button btnDownload %}
+<a name="to-upload-button" class="btn btn-primary btn-lg" id="upload-button" data-toggle="modal" data-target="#hydroshare-modal" role="button">
+            <span class="glyphicon hydroshare" aria-hidden="true"></span>
+            Upload to HydroShare
+        </a>
 
 {% endblock %}
 
@@ -60,6 +64,64 @@
 
 
 {% block scripts %}
+<div class="modal fade" id="hydroshare-modal" tabindex="-1" role="dialog" aria-labelledby="AddHydroshareResource">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h6 class="modal-title">Upload File to HydroShare as a Resource</h6>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="hydro-username" class="control-label">Hydroshare Username:</label>
+                    <input type="text" class="form-control" id="hydro-username">
+                </div>
+                <div class="form-group">
+                    <label for="hydro-password" class="control-label">Hydroshare Password:</label>
+                    <input type="password" class="form-control" id="hydro-password">
+                </div>
+                <div class="checkbox">
+                    <label>
+                        <input type="checkbox" id="credentials-checkbox">Remember me until page refresh (useful if uploading many files)
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="resource-title" class="control-label">Resource Title:</label>
+                    <input type="text" class="form-control" id="resource-title">
+                </div>
+                <div class="form-group">
+                    <label for="resource-type" class="control-label">Resource Type:</label>
+                    <select class="form-control" id="resource-type">
+                        <option>Generic</option>
+                        <option>Geographic Raster</option>
+                        <option>HIS Referenced Time Series</option>
+                        <option>Model Program</option>
+                        <option>Model Instance</option>
+                        <option>Multidimensional (NetCDF)</option>
+                        <option>Time Series</option>
+                        <option>Application</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="resource-abstract" class="control-label">Resource Abstract:</label>
+                    <textarea rows="4" cols="50" id="resource-abstract" class="form-control"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="resource-keywords" class="control-label">Resource Keywords:</label>
+                    <input class="form-control" id="resource-keywords" data-role="tagsinput"
+                           placeholder="Separate each keyword with a space or comma" onchange="tagChange(event)">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div id="display-status" class="col-md-8"></div>
+                <div id="footer-buttons" class="col-md-4">
+                    <button type="button" class="btn btn-default footer" data-dismiss="modal" onclick="clearUploadForm()">Close</button>
+                    <button type="button" class="btn btn-primary footer" id="hydroshare-proceed">Proceed</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
   {{ block.super }}
   <script src="{% static 'watershed_delin/js/map.js' %}"></script>
   <script src="{% static 'watershed_delin/js/WATERSServices-1.0.0-min.js' %}"></script>

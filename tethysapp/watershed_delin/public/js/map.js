@@ -585,6 +585,92 @@ function download_features(filename, features) {
     document.body.removeChild(element);
 }
 
+
+
+$('#hydroshare-proceed').on('click', function () {
+       //This function only works on HTML5 browsers.
+    var kmlformat = new ol.format.KML();
+    var basin_kml_filetext = kmlformat.writeFeatures(basin_layer.getSource().getFeatures(), {'dataProjection':'EPSG:4326','featureProjection': 'EPSG:3857'});
+    var streams_kml_filetext = kmlformat.writeFeatures(streams_layer.getSource().getFeatures(), {'dataProjection':'EPSG:4326','featureProjection': 'EPSG:3857'});
+
+
+
+
+    $(this).prop('disabled', true);
+    //displayStatus.removeClass('error');
+    //displayStatus.addClass('uploading');
+    //displayStatus.html('<em>Uploading...</em>');
+    var resourceTypeSwitch = function(typeSelection) {
+        var options = {
+            'Generic': 'GenericResource',
+            'Geographic Raster': 'RasterResource',
+            'HIS Referenced Time Series': 'RefTimeSeries',
+            'Model Instance': 'ModelInstanceResource',
+            'Model Program': 'ModelProgramResource',
+            'Multidimensional (NetCDF)': 'NetcdfResource', //not presently functional
+            'Time Series': 'TimeSeriesResource',
+            'Application': 'ToolResource'
+        };
+        return options[typeSelection];
+    };
+    var hydroUsername = $('#hydro-username').val();
+    var hydroPassword = $('#hydro-password').val();
+    var resourceAbstract = $('#resource-abstract').val();
+    var resourceTitle = $('#resource-title').val();
+    var resourceKeywords = $('#resource-keywords').val() ? $('#resource-keywords').val() : "";
+    var resourceType = resourceTypeSwitch($('#resource-type').val());
+
+    //if (!hydroPassword || !hydroUsername) {
+    //    displayStatus.removeClass('uploading');
+    //    displayStatus.addClass('error');
+    //    displayStatus.html('<em>You must enter a username and password.</em>');
+    //    return;
+    //}
+
+    $.ajax({
+        type: 'GET',
+        url: 'upload-to-hydroshare',
+        dataType:'json',
+        data: {
+                'basin_kml_filetext': basin_kml_filetext,
+                'streams_kml_filetext': streams_kml_filetext,
+                'hs_username': hydroUsername,
+                'hs_password': hydroPassword,
+                'r_title': resourceTitle,
+                'r_type': resourceType,
+                'r_abstract': resourceAbstract,
+                'r_keywords': resourceKeywords
+        },
+        success: function (data) {
+            alert("success");
+            debugger;
+            $('#hydroshare-proceed').prop('disabled', false);
+            if ('error' in data) {
+                displayStatus.removeClass('uploading');
+                displayStatus.addClass('error');
+                displayStatus.html('<em>' + data.error + '</em>');
+            } else {
+                displayStatus.removeClass('uploading');
+                displayStatus.addClass('success');
+
+                displayStatus.html('<em>' + data.success + ' View in HydroShare <a href="https://alpha.hydroshare.org/resource/' + data.newResource +
+                    '" target="_blank">here</a></em>');
+            }
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            alert("error");
+            debugger;
+            $('#hydroshare-proceed').prop('disabled', false);
+            console.log(jqXHR + '\n' + textStatus + '\n' + errorThrown);
+            displayStatus.removeClass('uploading');
+            displayStatus.addClass('error');
+            displayStatus.html('<em>' + errorThrown + '</em>');
+        }
+    });
+});
+
+
+
 function waiting_pis() {
     var wait_text = "<strong>Loading...</strong><br>" +
         "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='http://www.epa.gov/waters/tools/globe_spinning_small.gif'>";

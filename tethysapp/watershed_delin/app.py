@@ -22,6 +22,9 @@ class WatershedDelineation(TethysAppBase):
         url_maps = (UrlMap(name='home',
                            url='watershed-delin',
                            controller='watershed_delin.controllers.home'),
+                    UrlMap(name='upload_to_hydroshare_ajax',
+                           url='watershed-delin/upload-to-hydroshare',
+                           controller='watershed_delin.controllers.upload_to_hydroshare'),
         )
 
         return url_maps
