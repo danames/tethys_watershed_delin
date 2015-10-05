@@ -290,7 +290,7 @@ function addClickPoint(coordinates){
 function hide_buttons() {
     document.getElementById("btnDelineate").style.visibility="hidden";
     document.getElementById("btnDownload").style.visibility="hidden";
-    document.getElementById("upload-button").style.visibility="hidden";
+    document.getElementById("btnUpload").style.visibility="hidden";
     document.getElementById("delineation_output").innerHTML="";
 }
 
@@ -499,7 +499,7 @@ function nds_success(result, textStatus) {
                             "Stream Segments = " + stream_count;
         document.getElementById("delineation_output").innerHTML = success_text;
         document.getElementById("btnDownload").style.visibility="visible";
-        document.getElementById("upload-button").style.visibility="visible";
+        document.getElementById("btnUpload").style.visibility="visible";
         map.getView().fitExtent(basin_layer.getSource().getExtent(), map.getSize());
     }
 

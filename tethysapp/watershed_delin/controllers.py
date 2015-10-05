@@ -83,7 +83,6 @@ def upload_to_hydroshare(request):
             #startup a Hydroshare instance with user's credentials
             auth = HydroShareAuthBasic(username=hs_username, password=hs_password)
             hs = HydroShare(auth=auth, hostname="alpha.hydroshare.org", use_https=True)
-            print("1")
             # try to download a tiny file simply to test the user's credentials
             # test_id = '49d01b5b0d0a41b6a5a31d8aace0a36e'
             # hs.getResource(test_id, destination=None, unzip=False)
@@ -98,13 +97,11 @@ def upload_to_hydroshare(request):
                     fd.write(basin_kml_filetext)
             with open(streams_kml_file_path, 'w') as fd:
                     fd.write(streams_kml_filetext)
-            print("2")
             #upload the temp file to HydroShare
             if os.path.exists(basin_kml_file_path):
                 basin_resource_id = hs.createResource(r_type, r_title, resource_file=basin_kml_file_path,
                                                       keywords=r_keywords, abstract=r_abstract)
                 resource_id = hs.addResourceFile(basin_resource_id, streams_kml_file_path)
-                print("3")
             else:
                 if temp_dir:
                     # remove the temp directory/file
@@ -112,9 +109,9 @@ def upload_to_hydroshare(request):
                 return JsonResponse({'error': 'An error occurred with the file upload.'})
 
     except Exception, err:
-        #if temp_dir:
+        if temp_dir:
             # remove the temp directory/file
-        #    shutil.rmtree(temp_dir)
+           shutil.rmtree(temp_dir)
         if "401 Unauthorized" in str(err):
             return JsonResponse({'error': 'Username or password invalid.'})
         elif "400 Bad Request" in str(err):
@@ -124,6 +121,6 @@ def upload_to_hydroshare(request):
             return JsonResponse({'error': 'HydroShare rejected the upload for some reason.'})
 
     # remove the temp directory/file
-    #shutil.rmtree(temp_dir)
+    shutil.rmtree(temp_dir)
     return JsonResponse({'success': 'File uploaded successfully!',
                          'newResource': resource_id})
