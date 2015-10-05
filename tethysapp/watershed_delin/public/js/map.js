@@ -7,10 +7,12 @@ var baseMapLayer=null;
 
 //variables related to the delineation process
 var comid, fmeasure, reach_code, gnis_name, wbd_huc12;
+var displayStatus = $('#display-status');
 
 $(document).ready(function () {
     //hide the delineate and download buttons at first
     hide_buttons();
+    $('#resource-keywords').tagsinput({confirmKeys: [32, 44]});
 
 /*    var esri = new ol.layer.Tile({
         source: new ol.source.XYZ({
@@ -288,6 +290,7 @@ function addClickPoint(coordinates){
 function hide_buttons() {
     document.getElementById("btnDelineate").style.visibility="hidden";
     document.getElementById("btnDownload").style.visibility="hidden";
+    document.getElementById("upload-button").style.visibility="hidden";
     document.getElementById("delineation_output").innerHTML="";
 }
 
@@ -496,6 +499,7 @@ function nds_success(result, textStatus) {
                             "Stream Segments = " + stream_count;
         document.getElementById("delineation_output").innerHTML = success_text;
         document.getElementById("btnDownload").style.visibility="visible";
+        document.getElementById("upload-button").style.visibility="visible";
         map.getView().fitExtent(basin_layer.getSource().getExtent(), map.getSize());
     }
 
@@ -586,6 +590,39 @@ function download_features(filename, features) {
 }
 
 
+//This function is attached as an 'onclick' tag to the popup modal button button in home.html
+function clearUploadForm() {
+    if (!($('#credentials-checkbox').is(":checked"))) {
+        $('#hydro-username').val('');
+        $('#hydro-password').val('');
+    }
+    $('#resource-title').val('');
+    $('#resource-abstract').val('');
+    $('#resource-keywords')
+        .val('')
+        .tagsinput('removeAll');
+    displayStatus
+        .removeClass('error uploading success')
+        .empty();
+}
+
+function tagChange(event) { //added to $('#resource-keywords') as an 'onclick' function in home.html
+    var inputElement = $('.bootstrap-tagsinput').children('input');
+    var itemClicked = event.target || event.srcElement;
+    var itemId = itemClicked.id;
+    var jqueryIdCall = '#' + itemId;
+    if ($(jqueryIdCall).val() == "") {
+        inputElement.attr('placeholder', 'Separate each keyword with a space or comma');
+        inputElement.attr('style', 'width: 47em !important');
+    } else {
+        inputElement.removeAttr('placeholder');
+        inputElement.attr('style','width: 6em !important');
+
+    }
+}
+
+
+//Upload basin and streams kml file to hydroshare
 
 $('#hydroshare-proceed').on('click', function () {
        //This function only works on HTML5 browsers.
@@ -593,13 +630,10 @@ $('#hydroshare-proceed').on('click', function () {
     var basin_kml_filetext = kmlformat.writeFeatures(basin_layer.getSource().getFeatures(), {'dataProjection':'EPSG:4326','featureProjection': 'EPSG:3857'});
     var streams_kml_filetext = kmlformat.writeFeatures(streams_layer.getSource().getFeatures(), {'dataProjection':'EPSG:4326','featureProjection': 'EPSG:3857'});
 
-
-
-
     $(this).prop('disabled', true);
-    //displayStatus.removeClass('error');
-    //displayStatus.addClass('uploading');
-    //displayStatus.html('<em>Uploading...</em>');
+    displayStatus.removeClass('error');
+    displayStatus.addClass('uploading');
+    displayStatus.html('<em>Uploading...</em>');
     var resourceTypeSwitch = function(typeSelection) {
         var options = {
             'Generic': 'GenericResource',
@@ -620,12 +654,12 @@ $('#hydroshare-proceed').on('click', function () {
     var resourceKeywords = $('#resource-keywords').val() ? $('#resource-keywords').val() : "";
     var resourceType = resourceTypeSwitch($('#resource-type').val());
 
-    //if (!hydroPassword || !hydroUsername) {
-    //    displayStatus.removeClass('uploading');
-    //    displayStatus.addClass('error');
-    //    displayStatus.html('<em>You must enter a username and password.</em>');
-    //    return;
-    //}
+    if (!hydroPassword || !hydroUsername) {
+        displayStatus.removeClass('uploading');
+        displayStatus.addClass('error');
+        displayStatus.html('<em>You must enter a username and password.</em>');
+        return;
+    }
 
     $.ajax({
         type: 'GET',
@@ -642,7 +676,7 @@ $('#hydroshare-proceed').on('click', function () {
                 'r_keywords': resourceKeywords
         },
         success: function (data) {
-            alert("success");
+            alert("Success!");
             debugger;
             $('#hydroshare-proceed').prop('disabled', false);
             if ('error' in data) {
@@ -658,7 +692,7 @@ $('#hydroshare-proceed').on('click', function () {
             }
         },
         error: function (jqXHR, textStatus, errorThrown) {
-            alert("error");
+            alert("Error");
             debugger;
             $('#hydroshare-proceed').prop('disabled', false);
             console.log(jqXHR + '\n' + textStatus + '\n' + errorThrown);
@@ -668,7 +702,6 @@ $('#hydroshare-proceed').on('click', function () {
         }
     });
 });
-
 
 
 function waiting_pis() {

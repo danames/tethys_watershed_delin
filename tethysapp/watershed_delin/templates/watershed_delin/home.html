@@ -1,7 +1,14 @@
 {% extends "watershed_delin/base.html" %}
 
 {% load tethys_gizmos %}
+
 {% load staticfiles %}
+
+{% block styles %}
+{{ block.super }}
+<link href="{% static 'watershed/css/main.css' %}" rel="stylesheet"/>
+<link href="{% static 'watershed_delin/vendor/bootstrap-tagsinput/bootstrap-tagsinput.css' %}" rel="stylesheet"/>
+{% endblock %}
 
 {% block app_navigation_items %}
 
@@ -11,7 +18,7 @@
 
 {% gizmo button btnSearch %}
 
-<hr>
+<br>
 
 <div id="search_output"></div>
 
@@ -19,16 +26,18 @@
 
 {% gizmo button btnDelineate %}
 
-<hr>
-
 <div id="delineation_output"></div>
 
 <hr>
 
-{% gizmo button btnDownload %}
-<a name="to-upload-button" class="btn btn-primary btn-lg" id="upload-button" data-toggle="modal" data-target="#hydroshare-modal" role="button">
+<a name="btnDownload" class="btn btn-default" id="btnDownload" onclick="run_download_results()">
             <span class="glyphicon hydroshare" aria-hidden="true"></span>
-            Upload to HydroShare
+            <img src="/static/nfie_irods_explorer/images/download_icon.svg" class="button-icon"/>Download Results
+        </a>
+
+<a name="to-upload-button" class="btn btn-default" id="upload-button" data-toggle="modal" data-target="#hydroshare-modal" role="button">
+            <span class="glyphicon hydroshare" aria-hidden="true"></span>
+            <img src="/static/nfie_irods_explorer/images/hydroshare_logo.svg" class="button-icon"/>Upload to HydroShare
         </a>
 
 {% endblock %}
@@ -69,15 +78,15 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h6 class="modal-title">Upload File to HydroShare as a Resource</h6>
+                <h6 class="modal-title">Upload File to HydroShare as a Resource(*must)</h6>
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label for="hydro-username" class="control-label">Hydroshare Username:</label>
+                    <label for="hydro-username" class="control-label">*Hydroshare Username:</label>
                     <input type="text" class="form-control" id="hydro-username">
                 </div>
                 <div class="form-group">
-                    <label for="hydro-password" class="control-label">Hydroshare Password:</label>
+                    <label for="hydro-password" class="control-label">*Hydroshare Password:</label>
                     <input type="password" class="form-control" id="hydro-password">
                 </div>
                 <div class="checkbox">
@@ -86,11 +95,11 @@
                     </label>
                 </div>
                 <div class="form-group">
-                    <label for="resource-title" class="control-label">Resource Title:</label>
+                    <label for="resource-title" class="control-label">*Resource Title:</label>
                     <input type="text" class="form-control" id="resource-title">
                 </div>
                 <div class="form-group">
-                    <label for="resource-type" class="control-label">Resource Type:</label>
+                    <label for="resource-type" class="control-label">*Resource Type:</label>
                     <select class="form-control" id="resource-type">
                         <option>Generic</option>
                         <option>Geographic Raster</option>
@@ -103,11 +112,11 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="resource-abstract" class="control-label">Resource Abstract:</label>
+                    <label for="resource-abstract" class="control-label">*Resource Abstract:</label>
                     <textarea rows="4" cols="50" id="resource-abstract" class="form-control"></textarea>
                 </div>
                 <div class="form-group">
-                    <label for="resource-keywords" class="control-label">Resource Keywords:</label>
+                    <label for="resource-keywords" class="control-label">*Resource Keywords:</label>
                     <input class="form-control" id="resource-keywords" data-role="tagsinput"
                            placeholder="Separate each keyword with a space or comma" onchange="tagChange(event)">
                 </div>
@@ -125,6 +134,7 @@
   {{ block.super }}
   <script src="{% static 'watershed_delin/js/map.js' %}"></script>
   <script src="{% static 'watershed_delin/js/WATERSServices-1.0.0-min.js' %}"></script>
+  <script src="{% static 'watershed_delin/vendor/bootstrap-tagsinput/bootstrap-tagsinput.min.js' %}"></script>
   <!--<script src='http://maps.google.com/maps?file=api&amp;v=2&amp;key=ABQIAAAAjpkAC9ePGem0lIq5XcMiuhR_wWLPFku8Ix9i2SXYRVK3e45q1BQUd_beF8dtzKET_EteAjPdGDwqpQ'></script>-->
      <script type="text/javascript"
              src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDPgvDUpbEwcbg9C0cRTfDtDa-Vj4WBwI0">
