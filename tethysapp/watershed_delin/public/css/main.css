@@ -1,0 +1,64 @@
+.folders, .files {
+    width: 75%;
+}
+.always-hidden {
+    display: none;
+}
+.drop-down-icon {
+    height: 20px;
+}
+.td_row {
+    width: 100%;
+    padding: 5px;
+}
+.td_head {
+    width: 100%;
+    background-color: darkgray;
+	float: left;
+	font-weight: bold;
+	padding: 5px;
+}
+table {
+    background-color: lightgray;
+	border: 3px solid black;
+	font-size: 100%;
+}
+td {
+	border: 2px solid black;
+}
+.button {
+	width: 25%;
+}
+.button-icon {
+    height: 30px;
+}
+#submit-warning {
+    color: red;
+    font-weight: bold;
+}
+.bootstrap-tagsinput, #resource-type {
+    width: 100%;
+}
+.error {
+    background-color: red;
+    color: white;
+    text-align: center;
+    border-radius: 4%;
+}
+.uploading {
+    background-color: yellow;
+    color: darkblue;
+    text-align: center;
+}
+.hide-search {
+    display: none !important;
+}
+.success {
+    background-color: green;
+    color: white;
+    text-align: center;
+    border-radius: 4%;
+}
+.checkbox {
+     text-indent: 15px;
+}

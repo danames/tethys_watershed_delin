@@ -7,10 +7,12 @@ var baseMapLayer=null;
 
 //variables related to the delineation process
 var comid, fmeasure, reach_code, gnis_name, wbd_huc12;
+var displayStatus = $('#display-status');
 
 $(document).ready(function () {
     //hide the delineate and download buttons at first
     hide_buttons();
+    $('#resource-keywords').tagsinput({confirmKeys: [32, 44]});
 
 /*    var esri = new ol.layer.Tile({
         source: new ol.source.XYZ({
@@ -288,6 +290,7 @@ function addClickPoint(coordinates){
 function hide_buttons() {
     document.getElementById("btnDelineate").style.visibility="hidden";
     document.getElementById("btnDownload").style.visibility="hidden";
+    document.getElementById("btnUpload").style.visibility="hidden";
     document.getElementById("delineation_output").innerHTML="";
 }
 
@@ -496,6 +499,7 @@ function nds_success(result, textStatus) {
                             "Stream Segments = " + stream_count;
         document.getElementById("delineation_output").innerHTML = success_text;
         document.getElementById("btnDownload").style.visibility="visible";
+        document.getElementById("btnUpload").style.visibility="visible";
         map.getView().fitExtent(basin_layer.getSource().getExtent(), map.getSize());
     }
 
@@ -584,6 +588,121 @@ function download_features(filename, features) {
     element.click();
     document.body.removeChild(element);
 }
+
+
+//This function is attached as an 'onclick' tag to the popup modal button button in home.html
+function clearUploadForm() {
+    if (!($('#credentials-checkbox').is(":checked"))) {
+        $('#hydro-username').val('');
+        $('#hydro-password').val('');
+    }
+    $('#resource-title').val('');
+    $('#resource-abstract').val('');
+    $('#resource-keywords')
+        .val('')
+        .tagsinput('removeAll');
+    displayStatus
+        .removeClass('error uploading success')
+        .empty();
+}
+
+function tagChange(event) { //added to $('#resource-keywords') as an 'onclick' function in home.html
+    var inputElement = $('.bootstrap-tagsinput').children('input');
+    var itemClicked = event.target || event.srcElement;
+    var itemId = itemClicked.id;
+    var jqueryIdCall = '#' + itemId;
+    if ($(jqueryIdCall).val() == "") {
+        inputElement.attr('placeholder', 'Separate each keyword with a space or comma');
+        inputElement.attr('style', 'width: 47em !important');
+    } else {
+        inputElement.removeAttr('placeholder');
+        inputElement.attr('style','width: 6em !important');
+
+    }
+}
+
+
+//Upload basin and streams kml file to hydroshare
+
+$('#hydroshare-proceed').on('click', function () {
+       //This function only works on HTML5 browsers.
+    var kmlformat = new ol.format.KML();
+    var basin_kml_filetext = kmlformat.writeFeatures(basin_layer.getSource().getFeatures(), {'dataProjection':'EPSG:4326','featureProjection': 'EPSG:3857'});
+    var streams_kml_filetext = kmlformat.writeFeatures(streams_layer.getSource().getFeatures(), {'dataProjection':'EPSG:4326','featureProjection': 'EPSG:3857'});
+
+    $(this).prop('disabled', true);
+    displayStatus.removeClass('error');
+    displayStatus.addClass('uploading');
+    displayStatus.html('<em>Uploading...</em>');
+    var resourceTypeSwitch = function(typeSelection) {
+        var options = {
+            'Generic': 'GenericResource',
+            'Geographic Raster': 'RasterResource',
+            'HIS Referenced Time Series': 'RefTimeSeries',
+            'Model Instance': 'ModelInstanceResource',
+            'Model Program': 'ModelProgramResource',
+            'Multidimensional (NetCDF)': 'NetcdfResource', //not presently functional
+            'Time Series': 'TimeSeriesResource',
+            'Application': 'ToolResource'
+        };
+        return options[typeSelection];
+    };
+    var hydroUsername = $('#hydro-username').val();
+    var hydroPassword = $('#hydro-password').val();
+    var resourceAbstract = $('#resource-abstract').val();
+    var resourceTitle = $('#resource-title').val();
+    var resourceKeywords = $('#resource-keywords').val() ? $('#resource-keywords').val() : "";
+    var resourceType = resourceTypeSwitch($('#resource-type').val());
+
+    if (!hydroPassword || !hydroUsername) {
+        displayStatus.removeClass('uploading');
+        displayStatus.addClass('error');
+        displayStatus.html('<em>You must enter a username and password.</em>');
+        return;
+    }
+
+    $.ajax({
+        type: 'GET',
+        url: 'upload-to-hydroshare',
+        dataType:'json',
+        data: {
+                'basin_kml_filetext': basin_kml_filetext,
+                'streams_kml_filetext': streams_kml_filetext,
+                'hs_username': hydroUsername,
+                'hs_password': hydroPassword,
+                'r_title': resourceTitle,
+                'r_type': resourceType,
+                'r_abstract': resourceAbstract,
+                'r_keywords': resourceKeywords
+        },
+        success: function (data) {
+            alert("Success!");
+            debugger;
+            $('#hydroshare-proceed').prop('disabled', false);
+            if ('error' in data) {
+                displayStatus.removeClass('uploading');
+                displayStatus.addClass('error');
+                displayStatus.html('<em>' + data.error + '</em>');
+            } else {
+                displayStatus.removeClass('uploading');
+                displayStatus.addClass('success');
+
+                displayStatus.html('<em>' + data.success + ' View in HydroShare <a href="https://alpha.hydroshare.org/resource/' + data.newResource +
+                    '" target="_blank">here</a></em>');
+            }
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            alert("Error");
+            debugger;
+            $('#hydroshare-proceed').prop('disabled', false);
+            console.log(jqXHR + '\n' + textStatus + '\n' + errorThrown);
+            displayStatus.removeClass('uploading');
+            displayStatus.addClass('error');
+            displayStatus.html('<em>' + errorThrown + '</em>');
+        }
+    });
+});
+
 
 function waiting_pis() {
     var wait_text = "<strong>Loading...</strong><br>" +
