@@ -26,6 +26,11 @@
 
 <div id="delineation_output"></div>
 
+
+{% gizmo button btnUpstream %}
+
+<div id="upstream_output"></div>
+
 <hr>
 
 <a name="btnDownload" class="btn btn-default" id="btnDownload" onclick="run_download_results()">
@@ -76,7 +81,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h6 class="modal-title">Upload File to HydroShare as a Resource(*must)</h6>
+                <h6 class="modal-title">Upload File to HydroShare as a Resource(*Required)</h6>
             </div>
             <div class="modal-body">
                 <div class="form-group">
@@ -130,6 +135,7 @@
     </div>
 </div>
   {{ block.super }}
+  <script src="{% static 'watershed_delin/js/jquery_cookie/jquery.cookie.js' %}"></script>
   <script src="{% static 'watershed_delin/js/map.js' %}"></script>
   <script src="{% static 'watershed_delin/js/WATERSServices-1.0.0-min.js' %}"></script>
   <script src="{% static 'watershed_delin/vendor/bootstrap-tagsinput/bootstrap-tagsinput.min.js' %}"></script>

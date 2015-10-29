@@ -56,20 +56,27 @@ def home(request):
                         attributes="id=btnDelineate onclick=run_navigation_delineation_service();",
                         submit=False)
 
+    btnUpstream = Button(display_text="Find Upstream",
+                        name="btnUpstream",
+                        attributes="id=btnUpstream onclick=run_upstream_service();",
+                        submit=False)
+
     # Pass variables to the template via the context dictionary
     context = {'map_options': map_options,
                'select_input': select_input,
                'txtLocation': txtLocation,
                'btnSearch': btnSearch,
                'btnDelineate': btnDelineate,
+               'btnUpstream': btnUpstream,
                 }
     return render(request, 'watershed_delin/home.html', context)
 
 
 def upload_to_hydroshare(request):
+    temp_dir = None
     try:
-        if request.method == 'GET':
-            get_data = request.GET
+        if request.method == 'POST':
+            get_data = request.POST
             basin_kml_filetext = str(get_data['basin_kml_filetext'])
             streams_kml_filetext = str(get_data['streams_kml_filetext'])
             hs_username = str(get_data['hs_username'])

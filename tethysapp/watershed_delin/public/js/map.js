@@ -289,6 +289,7 @@ function addClickPoint(coordinates){
 
 function hide_buttons() {
     document.getElementById("btnDelineate").style.visibility="hidden";
+    document.getElementById("btnUpstream").style.visibility="hidden";
     document.getElementById("btnDownload").style.visibility="hidden";
     document.getElementById("btnUpload").style.visibility="hidden";
     document.getElementById("delineation_output").innerHTML="";
@@ -315,7 +316,37 @@ function CenterMap(lat,lon){
 
 //Functions for working with EPA WATERS web services
 
+//Search button, function if point indexing service
+function run_point_indexing_service(lonlat) {
+    var inputLon = lonlat[0];
+    var inputLat = lonlat[1];
+    var wktval = "POINT(" + inputLon + " " + inputLat + ")";
 
+    var options = {
+        "success" : "pis_success",
+        "error"   : "pis_error",
+        "timeout" : 60 * 1000
+    };
+
+    var data = {
+        "pGeometry": wktval,
+        "pGeometryMod": "WKT,SRSNAME=urn:ogc:def:crs:OGC::CRS84",
+        "pPointIndexingMethod": "DISTANCE",
+        "pPointIndexingMaxDist": 10,
+        "pOutputPathFlag": "TRUE",
+        "pReturnFlowlineGeomFlag": "FULL",
+        "optOutCS": "SRSNAME=urn:ogc:def:crs:OGC::CRS84",
+        "optOutPrettyPrint": 0,
+        "optClientRef": "CodePen"
+    };
+    hide_buttons();
+    clear_location_layers();
+    waiting_pis();
+    rtnStr = WATERS.Services.PointIndexingService(data, options);
+    // The service runs and when it is done, ti will call either the
+    // success or error functions. So the actual actions upon success all
+    // happen in the success function.
+}
 function run_point_indexing_service(lonlat) {
     var inputLon = lonlat[0];
     var inputLat = lonlat[1];
@@ -387,7 +418,7 @@ function pis_success(result, textStatus) {
             '<strong>Search Results:</strong><br>' +
             'Feature Name = ' + gnis_name + '<br>' +
             'Reach Code = ' + reachcode + '<br>' +
-            'Measure = ' + fmeasure + ' meters<br>' +
+            'Measure = ' + fmeasure + ' %<br>' +
             'HUC 12 = ' + wbd_huc12 ;
 
     document.getElementById("search_output").innerHTML = outstring;
@@ -403,7 +434,7 @@ function pis_success(result, textStatus) {
 
     //turn on the delineate button and turn off the download button and clear delin results
     document.getElementById("btnDelineate").style.visibility="visible";
-    //document.getElementById("btnDownload").style.visibility="hidden";
+    //document.getElementById("btnUpstream").style.visibility="visible";
     document.getElementById("delineation_output").innerHTML="";
 
     var coord = end_point_layer.getSource().getFeatures()[0].getGeometry().getCoordinates();
@@ -425,6 +456,8 @@ function pis_success(result, textStatus) {
 function pis_error(XMLHttpRequest, textStatus, errorThrown) {
     report_failed_search(textStatus);
 }
+
+//Delineate watershed button, function of navigation delineation service
 
 function geojson2feature(myGeoJSON) {
     //Convert GeoJSON object into an OpenLayers 3 feature.
@@ -514,7 +547,114 @@ function report_failed_delineation(textMessage) {
     document.getElementById("delineation_output").innerHTML = "<strong>Delineation Error:</strong><br>" + textMessage;
 }
 
+//function of upstream service
+function run_upstream_service(){
+    var options = {
+        "success": "us_success",
+        "error": "us_error",
+        "timeout": 60 * 1000,
+        "geomFormat": "GEOJSON"
+    };
 
+    var data = {
+        "pNavigationType": "UT",
+        "pStartComid": comid,
+        "pStartMeasure": fmeasure,
+        "pTraversalSummary" : "TRUE",
+        "pFlowlinelist" : "TRUE",
+        "pEventList" : WATERS.Helpers.GetFieldValue("dz_programs"),
+        "pEventListMod": ",",
+        "pStopDistancekm": 1000,
+        "optNHDPlusDataset": "2.1"
+
+    };
+
+    waiting_us();
+    rtnStr = WATERS.Services.UpstreamDownstreamService(data, options);
+    //this will start the service. If it succeeds, it will call us_success.
+
+}
+
+function us_success(result, textStatus) {
+    document.getElementById("upstream_output").innerHTML = '';
+
+    var srv_rez = result.output;
+
+    if (srv_rez == null) {
+        if (result.status.status_message !== null) {
+            report_failed_upstream(result.status.status_message);
+        } else {
+            report_failed_upstream("No results found")
+        }
+    } else {
+
+        var srv_events = result.output.events_encountered;
+
+        function drawTable() {
+            var tableData = new google.visualization.DataTable();
+            tableData.addColumn('string', 'Water Program');
+            tableData.addColumn('string', 'Event Comid');
+            tableData.addColumn('string', 'Event Source FeatureID');
+            tableData.addColumn('string', 'Event Reach Code');
+            tableData.addColumn('string', 'Event From Measure');
+            tableData.addColumn('string', 'Event To Measure');
+
+            var rowIndex = 0;
+            var output = document.getElementById("output");
+            var distance = Math.round(srv_rez.total_distance * 1000) / 1000;
+
+            for (index in srv_events) {
+                tableData.addRows(1);
+                var colIndex = 0;
+                tableData.setCell(rowIndex, colIndex++, WATERS.Helpers.Abbr2Program(srv_events[index].source_program));
+                tableData.setCell(rowIndex, colIndex++, srv_events[index].evtcomid.toString());
+                tableData.setCell(rowIndex, colIndex++, srv_events[index].source_featureid);
+                tableData.setCell(rowIndex, colIndex++, srv_events[index].reachcode);
+                if (srv_events[index].from_measure == -1) {
+                    tableData.setCell(rowIndex, colIndex++, srv_events[index].start_measure.toString());
+                    tableData.setCell(rowIndex, colIndex++, " ");
+                } else {
+                    tableData.setCell(rowIndex, colIndex++, srv_events[index].from_measure.toString());
+                    tableData.setCell(rowIndex, colIndex++, srv_events[index].to_measure.toString());
+                }
+                rowIndex++;
+            }
+
+            var table = new google.visualization.Table(output);
+            table.draw(
+                tableData,
+                {
+                    showRowNumber: true,
+                    allowHtml: true,
+                    sortColumn: 1,
+                    page: "enable",
+                    pageSize: Math.floor((document.body.clientHeight - 135) / 19)
+                }
+            );
+        }
+
+        google.load('visualization', '1', {packages: ['table'], callback: drawTable});
+
+        var srv_fl = result.output.flowlines_traversed
+        for (i in srv_fl) {
+            flowlines.addFeatures(geojson2feature(srv_fl[i].shape));
+        }
+        flowlines.refresh();
+
+        for (i in srv_events) {
+            rad_303d.addFeatures(geojson2feature(srv_events[i].shape));
+        }
+        rad_303d.refresh();
+    }
+
+    $tabs.tabs("option", "disabled", []);
+    $tabs.tabs("select", "results");
+}
+
+
+
+// Show a point in the map of the location inputted in the search box,
+// or show the location information of the point clicked in the map
 function run_geocoder() {
     g = new google.maps.Geocoder();
     myAddress=document.getElementById('txtLocation').value;
@@ -570,6 +710,8 @@ function handle_search_key(e) {
     }
 }
 
+//Download the results(kml files)
+
 function run_download_results() {
     //Download sasin and streams features
     download_features("basin.kml",basin_layer.getSource().getFeatures());
@@ -624,6 +766,20 @@ function tagChange(event) { //added to $('#resource-keywords') as an 'onclick' f
 
 //Upload basin and streams kml file to hydroshare
 
+var csrftoken = $.cookie('csrftoken');
+
+function csrfSafeMethod(method) {
+    // these HTTP methods do not require CSRF protection
+    return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+}
+
+$.ajaxSetup({
+    beforeSend: function(xhr, settings) {
+        if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+            xhr.setRequestHeader("X-CSRFToken", csrftoken);
+        }
+    }
+});
 $('#hydroshare-proceed').on('click', function () {
        //This function only works on HTML5 browsers.
     var kmlformat = new ol.format.KML();
@@ -662,8 +818,8 @@ $('#hydroshare-proceed').on('click', function () {
     }
 
     $.ajax({
-        type: 'GET',
-        url: 'upload-to-hydroshare',
+        type: 'POST',
+        url: 'upload-to-hydroshare/',
         dataType:'json',
         data: {
                 'basin_kml_filetext': basin_kml_filetext,
@@ -674,7 +830,7 @@ $('#hydroshare-proceed').on('click', function () {
                 'r_type': resourceType,
                 'r_abstract': resourceAbstract,
                 'r_keywords': resourceKeywords
-        },
+                        },
         success: function (data) {
             alert("Success!");
             debugger;
@@ -706,14 +862,18 @@ $('#hydroshare-proceed').on('click', function () {
 
 function waiting_pis() {
     var wait_text = "<strong>Loading...</strong><br>" +
-        "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='http://www.epa.gov/waters/tools/globe_spinning_small.gif'>";
+        "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='/static/watershed_delin/images/satellite_97.gif'>";
     document.getElementById('search_output').innerHTML = wait_text;
 }
 
 function waiting_nds() {
     var wait_text = "<strong>Loading...</strong><br>" +
-        "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='http://www.epa.gov/waters/tools/globe_spinning_small.gif'>";
+        "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='/static/watershed_delin/images/satellite_97.gif'>";
     document.getElementById('delineation_output').innerHTML = wait_text;
 }
 
-
+function waiting_us() {
+    var wait_text = "<strong>Loading...</strong><br>" +
+        "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='/static/watershed_delin/images/satellite_97.gif'>";
+    document.getElementById('upstream_output').innerHTML = wait_text;
+}
