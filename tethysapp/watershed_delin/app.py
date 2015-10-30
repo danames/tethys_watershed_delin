@@ -6,7 +6,7 @@ class WatershedDelineation(TethysAppBase):
     Tethys app class for Watershed Delineation.
     """
 
-    name = 'Watershed Delineation'
+    name = 'EPA WATERS Services'
     index = 'watershed_delin:home'
     icon = 'watershed_delin/images/icon.gif'
     package = 'watershed_delin'
