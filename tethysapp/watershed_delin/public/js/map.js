@@ -1,6 +1,7 @@
 //variables related to the map
 var map, start_point_layer, click_point_layer, end_point_layer, indexing_path_layer, flow_lines_layer;
 var basin_layer, streams_layer;
+var upstream_layer, downstream_layer
 var flag_geocoded;
 
 var baseMapLayer=null;
@@ -13,8 +14,7 @@ $(document).ready(function () {
     //hide the delineate and download buttons at first
     hide_buttons();
     $('#resource-keywords').tagsinput({confirmKeys: [32, 44]});
-
-/*    var esri = new ol.layer.Tile({
+    /*    var esri = new ol.layer.Tile({
         source: new ol.source.XYZ({
             attribution: [new ol.Attribution({
                 html: 'Tiles &copy; <a href="http://services.arcgisonline.com/ArcGIS/' +
@@ -195,6 +195,44 @@ $(document).ready(function () {
         })
     });
 
+    upstream_layer = new ol.layer.Vector({
+        source: new ol.source.Vector(),
+        style: new ol.style.Style({
+            fill: new ol.style.Fill({
+                color: 'rgba(0,0,255,0.6)'
+            }),
+            stroke: new ol.style.Stroke({
+                color: '#0000ff',
+                width: 2
+            }),
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: '#0000ff'
+                })
+            })
+        })
+    });
+
+    downstream_layer = new ol.layer.Vector({
+        source: new ol.source.Vector(),
+        style: new ol.style.Style({
+            fill: new ol.style.Fill({
+                color: 'rgba(0,0,255,0.6)'
+            }),
+            stroke: new ol.style.Stroke({
+                color: '#0000ff',
+                width: 2
+            }),
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: '#0000ff'
+                })
+            })
+        })
+    });
+
     //set bing map as base map
     baseMapLayer=bing_layer;
     map.addLayer(baseMapLayer);
@@ -205,6 +243,8 @@ $(document).ready(function () {
     map.addLayer(flow_lines_layer);
     map.addLayer(basin_layer);
     map.addLayer(streams_layer);
+    map.addLayer(upstream_layer);
+    map.addLayer(downstream_layer);
 
     find_current_location();
 
@@ -347,36 +387,6 @@ function run_point_indexing_service(lonlat) {
     // success or error functions. So the actual actions upon success all
     // happen in the success function.
 }
-function run_point_indexing_service(lonlat) {
-    var inputLon = lonlat[0];
-    var inputLat = lonlat[1];
-    var wktval = "POINT(" + inputLon + " " + inputLat + ")";
-
-    var options = {
-        "success" : "pis_success",
-        "error"   : "pis_error",
-        "timeout" : 60 * 1000
-    };
-
-    var data = {
-        "pGeometry": wktval,
-        "pGeometryMod": "WKT,SRSNAME=urn:ogc:def:crs:OGC::CRS84",
-        "pPointIndexingMethod": "DISTANCE",
-        "pPointIndexingMaxDist": 10,
-        "pOutputPathFlag": "TRUE",
-        "pReturnFlowlineGeomFlag": "FULL",
-        "optOutCS": "SRSNAME=urn:ogc:def:crs:OGC::CRS84",
-        "optOutPrettyPrint": 0,
-        "optClientRef": "CodePen"
-    };
-    hide_buttons();
-    clear_location_layers();
-    waiting_pis();
-    rtnStr = WATERS.Services.PointIndexingService(data, options);
-    // The service runs and when it is done, ti will call either the
-    // success or error functions. So the actual actions upon success all
-    // happen in the success function.
-}
 
 function report_failed_search(MessageText){
     //Set the message of the bad news
@@ -434,7 +444,7 @@ function pis_success(result, textStatus) {
 
     //turn on the delineate button and turn off the download button and clear delin results
     document.getElementById("btnDelineate").style.visibility="visible";
-    //document.getElementById("btnUpstream").style.visibility="visible";
+    document.getElementById("btnUpstream").style.visibility="visible";
     document.getElementById("delineation_output").innerHTML="";
 
     var coord = end_point_layer.getSource().getFeatures()[0].getGeometry().getCoordinates();
@@ -547,8 +557,10 @@ function report_failed_delineation(textMessage) {
     document.getElementById("delineation_output").innerHTML = "<strong>Delineation Error:</strong><br>" + textMessage;
 }
 
+
 //function of upstream service
 function run_upstream_service(){
+
     var options = {
         "success": "us_success",
         "error": "us_error",
@@ -560,10 +572,9 @@ function run_upstream_service(){
         "pNavigationType": "UT",
         "pStartComid": comid,
         "pStartMeasure": fmeasure,
+        "pOutputFlag": "BOTH",
         "pTraversalSummary" : "TRUE",
         "pFlowlinelist" : "TRUE",
-        "pEventList" : WATERS.Helpers.GetFieldValue("dz_programs"),
-        "pEventListMod": ",",
         "pStopDistancekm": 1000,
         "optNHDPlusDataset": "2.1"
 
@@ -576,6 +587,8 @@ function run_upstream_service(){
 }
 
 function us_success(result, textStatus) {
+    alert("456");
+
     document.getElementById("upstream_output").innerHTML = '';
 
     var srv_rez = result.output;
@@ -584,73 +597,86 @@ function us_success(result, textStatus) {
         if (result.status.status_message !== null) {
             report_failed_upstream(result.status.status_message);
         } else {
-            report_failed_upstream("No results found")
+            report_failed_upstream("No results found");
         }
     } else {
 
-        var srv_events = result.output.events_encountered;
+        upstream_layer.getSource().clear();
 
-        function drawTable() {
-            var tableData = new google.visualization.DataTable();
-            tableData.addColumn('string', 'Water Program');
-            tableData.addColumn('string', 'Event Comid');
-            tableData.addColumn('string', 'Event Source FeatureID');
-            tableData.addColumn('string', 'Event Reach Code');
-            tableData.addColumn('string', 'Event From Measure');
-            tableData.addColumn('string', 'Event To Measure');
+        //var srv_events  = result.output.events_encountered;
+        //
+        //function drawTable() {
+        //    var tableData = new google.visualization.DataTable();
+        //    tableData.addColumn('string', 'Water Program');
+        //    tableData.addColumn('string', 'Event Comid');
+        //    tableData.addColumn('string', 'Event Source FeatureID');
+        //    tableData.addColumn('string', 'Event Reach Code');
+        //    tableData.addColumn('string', 'Event From Measure');
+        //    tableData.addColumn('string', 'Event To Measure');
+        //
+        //    var rowIndex = 0;
+        //    var output = document.getElementById("output");
+        //    var distance = Math.round(srv_rez.total_distance*1000)/1000;
+        //
+        //    for (index in srv_events) {
+        //        tableData.addRows(1);
+        //        var colIndex = 0;
+        //        tableData.setCell(rowIndex, colIndex++, WATERS.Helpers.Abbr2Program(srv_events[index].source_program));
+        //        tableData.setCell(rowIndex, colIndex++, srv_events[index].evtcomid.toString());
+        //        tableData.setCell(rowIndex, colIndex++, srv_events[index].source_featureid);
+        //        tableData.setCell(rowIndex, colIndex++, srv_events[index].reachcode);
+        //        if ( srv_events[index].from_measure == -1 ) {
+        //            tableData.setCell(rowIndex, colIndex++, srv_events[index].start_measure.toString());
+        //            tableData.setCell(rowIndex, colIndex++, " ");
+        //        } else {
+        //            tableData.setCell(rowIndex, colIndex++, srv_events[index].from_measure.toString());
+        //            tableData.setCell(rowIndex, colIndex++, srv_events[index].to_measure.toString());
+        //        }
+        //        rowIndex++;
+        //    }
+        //
+        //    var table = new google.visualization.Table(output);
+        //    table.draw(
+        //        tableData,
+        //        {
+        //            showRowNumber: true,
+        //            allowHtml: true,
+        //            sortColumn: 1,
+        //            page: "enable",
+        //            pageSize: Math.floor((document.body.clientHeight - 135)/19)
+        //        }
+        //    );
+        //}
+        //
+        //google.load('visualization', '1', {packages:['table'], callback: drawTable});
 
-            var rowIndex = 0;
-            var output = document.getElementById("output");
-            var distance = Math.round(srv_rez.total_distance * 1000) / 1000;
+        var srv_fl  = result.output.flowlines_traversed;
 
-            for (index in srv_events) {
-                tableData.addRows(1);
-                var colIndex = 0;
-                tableData.setCell(rowIndex, colIndex++, WATERS.Helpers.Abbr2Program(srv_events[index].source_program));
-                tableData.setCell(rowIndex, colIndex++, srv_events[index].evtcomid.toString());
-                tableData.setCell(rowIndex, colIndex++, srv_events[index].source_featureid);
-                tableData.setCell(rowIndex, colIndex++, srv_events[index].reachcode);
-                if (srv_events[index].from_measure == -1) {
-                    tableData.setCell(rowIndex, colIndex++, srv_events[index].start_measure.toString());
-                    tableData.setCell(rowIndex, colIndex++, " ");
-                } else {
-                    tableData.setCell(rowIndex, colIndex++, srv_events[index].from_measure.toString());
-                    tableData.setCell(rowIndex, colIndex++, srv_events[index].to_measure.toString());
-                }
-                rowIndex++;
-            }
-
-            var table = new google.visualization.Table(output);
-            table.draw(
-                tableData,
-                {
-                    showRowNumber: true,
-                    allowHtml: true,
-                    sortColumn: 1,
-                    page: "enable",
-                    pageSize: Math.floor((document.body.clientHeight - 135) / 19)
-                }
-            );
+        for ( i in srv_fl ) {
+            upstream_layer.addFeatures(geojson2feature(srv_fl[i].shape));
         }
+        //for ( i in srv_events ) {
+        //    rad_303d.addFeatures(geojson2feature(srv_events[i].shape));
+        //}
+        //rad_303d.refresh();
 
-        google.load('visualization', '1', {packages: ['table'], callback: drawTable});
-
-        var srv_fl = result.output.flowlines_traversed
-        for (i in srv_fl) {
-            flowlines.addFeatures(geojson2feature(srv_fl[i].shape));
-        }
-        flowlines.refresh();
-
-        for (i in srv_events) {
-            rad_303d.addFeatures(geojson2feature(srv_events[i].shape));
-        }
-        rad_303d.refresh();
+        //var stream_count = streams_layer.getSource().getFeatures().length;
+        var success_text = "<strong>Upstream Query Results:</strong><br>" +
+                            "Stream Segments = 123";
+        document.getElementById("upstream_output").innerHTML = success_text;
+        document.getElementById("btnDownload").style.visibility="visible";
+        document.getElementById("btnUpload").style.visibility="visible";
+        map.getView().fitExtent(upstream_layer.getSource().getExtent(), map.getSize());
     }
-
-    $tabs.tabs("option", "disabled", []);
-    $tabs.tabs("select", "results");
 }
 
+function us_error(XMLHttpRequest, textStatus, errorThrown) {
+    alert('abc');
+    report_failed_upstream(textStatus);
+}
+function report_failed_upstream(textMessage) {
+    document.getElementById("upstream_output").innerHTML = "<strong>Upstream Query Error:</strong><br>" + textMessage;
+}
 
 
 // Show a point in the map of the location inputted in the search box,
@@ -780,6 +806,7 @@ $.ajaxSetup({
         }
     }
 });
+
 $('#hydroshare-proceed').on('click', function () {
        //This function only works on HTML5 browsers.
     var kmlformat = new ol.format.KML();
@@ -862,18 +889,18 @@ $('#hydroshare-proceed').on('click', function () {
 
 function waiting_pis() {
     var wait_text = "<strong>Loading...</strong><br>" +
-        "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='/static/watershed_delin/images/satellite_97.gif'>";
+        "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='/static/watershed_delin/images/earth_globe.gif'>";
     document.getElementById('search_output').innerHTML = wait_text;
 }
 
 function waiting_nds() {
     var wait_text = "<strong>Loading...</strong><br>" +
-        "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='/static/watershed_delin/images/satellite_97.gif'>";
+        "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='/static/watershed_delin/images/earth_globe.gif'>";
     document.getElementById('delineation_output').innerHTML = wait_text;
 }
 
 function waiting_us() {
     var wait_text = "<strong>Loading...</strong><br>" +
-        "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='/static/watershed_delin/images/satellite_97.gif'>";
+        "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='/static/watershed_delin/images/earth_globe.gif'>";
     document.getElementById('upstream_output').innerHTML = wait_text;
 }
