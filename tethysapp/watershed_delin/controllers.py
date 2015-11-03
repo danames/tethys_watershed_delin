@@ -38,7 +38,7 @@ def home(request):
                             multiple=False,
                             options=[('Bing', 'bing_layer'), ('MapQuest', 'mapQuest_layer'), ('OpenStreet', 'openstreet_layer'), ('Stamen', 'stamen_layer')],
                             original=['Bing'],
-                           attributes="id=selectInput onchange=run_select_basemap()")
+                            attributes="id=selectInput onchange=run_select_basemap()")
 
     txtLocation = TextInput(display_text='Location Search:',
                     name="txtLocation",
@@ -56,10 +56,12 @@ def home(request):
                         attributes="id=btnDelineate onclick=run_navigation_delineation_service();",
                         submit=False)
 
-    btnUpstream = Button(display_text="Find Upstream",
-                        name="btnUpstream",
-                        attributes="id=btnUpstream onclick=run_upstream_service();",
-                        submit=False)
+    select_navigation = SelectInput(display_text="",
+                                name='select_navigation',
+                                multiple=False,
+                                options=[('Find Upstream/Downstream', 'select'), ('Upstream mainstem', 'UM'), ('Upstream with tributaries', 'UT'), ('Downstream mainstream', 'DM'), ('Downstream with divergences', 'DD')],
+                                original=['Find Upstream/Downstream'],
+                                attributes="id=select_navigation onchange=run_upstream_service()")
 
     # Pass variables to the template via the context dictionary
     context = {'map_options': map_options,
@@ -67,7 +69,7 @@ def home(request):
                'txtLocation': txtLocation,
                'btnSearch': btnSearch,
                'btnDelineate': btnDelineate,
-               'btnUpstream': btnUpstream,
+               'select_navigation': select_navigation
                 }
     return render(request, 'watershed_delin/home.html', context)
 
@@ -87,6 +89,7 @@ def upload_to_hydroshare(request):
             r_keywords_raw = str(get_data['r_keywords'])
             r_keywords = r_keywords_raw.split(',')
 
+            print hs_username, hs_password
             #startup a Hydroshare instance with user's credentials
             auth = HydroShareAuthBasic(username=hs_username, password=hs_password)
             hs = HydroShare(auth=auth, hostname="alpha.hydroshare.org", use_https=True)
@@ -102,8 +105,12 @@ def upload_to_hydroshare(request):
 
             with open(basin_kml_file_path, 'w') as fd:
                     fd.write(basin_kml_filetext)
+            print basin_kml_filetext
+
             with open(streams_kml_file_path, 'w') as fd:
                     fd.write(streams_kml_filetext)
+            print streams_kml_filetext
+
             #upload the temp file to HydroShare
             if os.path.exists(basin_kml_file_path):
                 basin_resource_id = hs.createResource(r_type, r_title, resource_file=basin_kml_file_path,

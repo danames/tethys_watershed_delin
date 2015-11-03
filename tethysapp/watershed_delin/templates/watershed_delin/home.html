@@ -26,10 +26,9 @@
 
 <div id="delineation_output"></div>
 
+{% gizmo select_input select_navigation %}
 
-{% gizmo button btnUpstream %}
-
-<div id="upstream_output"></div>
+<div id="up_down_output"></div>
 
 <hr>
 
@@ -49,7 +48,6 @@
 {% block app_content %}
   <p><strong>Instructions:</strong> Search for a location and/or click the map to identify a watershed outlet and stream reach of interest.
     Then click the "Delineate Watershed" button.</p>
-
 
 
 {% gizmo map_view map_options %}
