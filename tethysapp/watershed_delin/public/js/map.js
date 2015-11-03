@@ -202,7 +202,7 @@ $(document).ready(function () {
                 color: 'rgba(0,0,255,0.6)'
             }),
             stroke: new ol.style.Stroke({
-                color: '#0000ff',
+                color: '#00008b',
                 width: 2
             }),
             image: new ol.style.Circle({
@@ -244,7 +244,7 @@ $(document).ready(function () {
     map.addLayer(basin_layer);
     map.addLayer(streams_layer);
     map.addLayer(upstream_layer);
-    map.addLayer(downstream_layer);
+    //map.addLayer(downstream_layer);
 
     find_current_location();
 
@@ -480,6 +480,7 @@ function geojson2feature(myGeoJSON) {
     myGeometry.transform('EPSG:4326','EPSG:3857');
     var myFeature = new ol.Feature(myGeometry);
     return myFeature;
+
 }
 
 function run_navigation_delineation_service(){
@@ -572,22 +573,18 @@ function run_upstream_service(){
         "pNavigationType": "UT",
         "pStartComid": comid,
         "pStartMeasure": fmeasure,
-        "pOutputFlag": "BOTH",
         "pTraversalSummary" : "TRUE",
         "pFlowlinelist" : "TRUE",
         "pStopDistancekm": 1000,
         "optNHDPlusDataset": "2.1"
-
     };
 
     waiting_us();
     rtnStr = WATERS.Services.UpstreamDownstreamService(data, options);
     //this will start the service. If it succeeds, it will call us_success.
-
 }
 
 function us_success(result, textStatus) {
-    alert("456");
 
     document.getElementById("upstream_output").innerHTML = '';
 
@@ -595,9 +592,9 @@ function us_success(result, textStatus) {
 
     if (srv_rez == null) {
         if (result.status.status_message !== null) {
-            report_failed_upstream(result.status.status_message);
+            document.getElementById("upstream_output").innerHTML = result.status.status_message;
         } else {
-            report_failed_upstream("No results found");
+            document.getElementById("upstream_output").innerHTML = "No results found";
         }
     } else {
 
@@ -651,29 +648,41 @@ function us_success(result, textStatus) {
         //google.load('visualization', '1', {packages:['table'], callback: drawTable});
 
         var srv_fl  = result.output.flowlines_traversed;
+        j = JSON.stringify(srv_fl[0].shape)
+        alert(j);
+
+        alert(srv_fl[0].start_comid);
+
+//DDDFSDFSDFSAFAFSFASFDSFSAFASFSADFDSFSAFSAGFSAFs
 
         for ( i in srv_fl ) {
-            upstream_layer.addFeatures(geojson2feature(srv_fl[i].shape));
+            upstream_layer.getSource().addFeatures(geojson2feature(srv_fl[i].shape));
+            //j = JSON.stringify(geojson2feature(srv_fl[i].shape));
+            //alert(j);
         }
-        //for ( i in srv_events ) {
-        //    rad_303d.addFeatures(geojson2feature(srv_events[i].shape));
-        //}
-        //rad_303d.refresh();
 
-        //var stream_count = streams_layer.getSource().getFeatures().length;
+        var kmlformat = new ol.format.KML();
+        var features = upstream_layer.getSource().getFeatures();
+        var filetext = kmlformat.writeFeatures(features, {'dataProjection':'EPSG:4326','featureProjection': 'EPSG:3857'});
+        alert(filetext);
+
+        var stream_count = upstream_layer.getSource().getFeatures().length;
+
         var success_text = "<strong>Upstream Query Results:</strong><br>" +
-                            "Stream Segments = 123";
+                            "Stream Segments = " + stream_count;
         document.getElementById("upstream_output").innerHTML = success_text;
-        document.getElementById("btnDownload").style.visibility="visible";
-        document.getElementById("btnUpload").style.visibility="visible";
+        //document.getElementById("btnDownload").style.visibility="visible";
+        //document.getElementById("btnUpload").style.visibility="visible";
         map.getView().fitExtent(upstream_layer.getSource().getExtent(), map.getSize());
     }
 }
 
 function us_error(XMLHttpRequest, textStatus, errorThrown) {
-    alert('abc');
+    alert(textStatus);
     report_failed_upstream(textStatus);
+
 }
+
 function report_failed_upstream(textMessage) {
     document.getElementById("upstream_output").innerHTML = "<strong>Upstream Query Error:</strong><br>" + textMessage;
 }
