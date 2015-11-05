@@ -3,6 +3,7 @@ var map, start_point_layer, click_point_layer, end_point_layer, indexing_path_la
 var basin_layer, streams_layer;
 var upstream_layer, downstream_layer;
 var flag_geocoded;
+var resAbstr, upAbstract, downAbstract;
 
 var baseMapLayer=null;
 
@@ -509,6 +510,7 @@ function run_navigation_delineation_service(){
     //this will start the service. If it succeeds, it will call nds_success.
 }
 
+
 function nds_success(result, textStatus) {
 
    document.getElementById("delineation_output").innerHTML = '';
@@ -544,6 +546,21 @@ function nds_success(result, textStatus) {
         var success_text = "<strong>Delineation Results:</strong><br>" +
                             "Watershed Area = " + basin_area + " sq-km<br>" +
                             "Stream Segments = " + stream_count;
+
+        resAbstr = 'This resource contains automatically created KML files representing a watershed boundary and ' +
+            'stream network delineated by the EPA Waters Services using the Tethys EPA Waters Services web app. ' +
+            'National Hydrologic Dataset (NHD) stream outlet details:' + 'Feature Name = ' + gnis_name +
+            ', Reach Code = ' + reachcode +', Measure = ' + fmeasure +
+            ', HUC 12 = ' + wbd_huc12 + '. Delineation Results: Watershed Area = ' + basin_area + ' sq-km. ' +
+            'Stream Segments = ' + stream_count +'.';
+
+        if( upstream_layer.getSource().getFeatures().length> 0){
+            $('#resource-abstract').val(resAbstr+upAbstract);
+        }else if(downstream_layer.getSource().getFeatures().length> 0){
+            $('#resource-abstract').val(resAbstr+downAbstract);}
+        else{
+            $('#resource-abstract').val(resAbstr);}
+
         document.getElementById("delineation_output").innerHTML = success_text;
         document.getElementById("btnDownload").style.visibility="visible";
         document.getElementById("btnUpload").style.visibility="visible";
@@ -627,16 +644,35 @@ function us_success(result, textStatus) {
             var success_text = "<strong>Results:</strong><br>" +
                             "Stream Segments = " + stream_count;
             map.getView().fitExtent(upstream_layer.getSource().getExtent(), map.getSize());
-        }else
-        {
+
+            upAbstract = 'This resource contains automatically created kml file representing upstream of this point '
+                +'queried by the EPA Waters Service using the Tethys EPA Waters Service web app. '+ 'Upstream Results: '
+                +'Stream Segments = ' + stream_count +'.';
+
+            if( basin_layer.getSource().getFeatures().length> 0){
+                $('#resource-abstract').val(resAbstr+upAbstract);
+            }else{
+                $('#resource-abstract').val(upAbstract);}
+        }else{
             for ( i in result.output.flowlines_traversed) {
                 downstream_layer.getSource().addFeature(geojson2feature(result.output.flowlines_traversed[i].shape));
             }
             var stream_count = downstream_layer.getSource().getFeatures().length;
             var success_text = "<strong>Results:</strong><br>" +
                             "Stream Segments = " + stream_count;
+
+            downAbstract = 'This resource contains automatically created kml file representing downstream of this point '
+                +'queried by the EPA Waters Service using the Tethys EPA Waters Service web app. '+ 'Downstream Results: '
+                +'Stream Segments = ' + stream_count +'.';
+
+            if( basin_layer.getSource().getFeatures().length> 0){
+                $('#resource-abstract').val(resAbstr+downAbstract);
+            }else{
+                $('#resource-abstract').val(downAbstract);}
+
             map.getView().fitExtent(downstream_layer.getSource().getExtent(), map.getSize());
         }
+
 
         document.getElementById("up_down_output").innerHTML = success_text;
         document.getElementById("btnDownload").style.visibility="visible";
@@ -699,6 +735,8 @@ function reverse_geocode_success(results, status) {
             location = gnis_name + ", " + location;
         }
         document.getElementById("txtLocation").value = location;
+        var resourceTitle = 'Watershed at '+ location;
+        $('#resource-title').val(resourceTitle);
     } else {
         document.getElementById("txtLocation").value = "Location Not Available";
     }
@@ -794,10 +832,12 @@ $.ajaxSetup({
 });
 
 $('#hydroshare-proceed').on('click', function ()  {
-       //This function only works on HTML5 browsers.
+           //This function only works on HTML5 browsers.
     var kmlformat = new ol.format.KML();
-    var basin_kml_filetext = kmlformat.writeFeatures(basin_layer.getSource().getFeatures(), {'dataProjection':'EPSG:4326','featureProjection': 'EPSG:3857'});
+    var basin_kml_filetext = kmlformat.writeFeatures(basin_layer.getSource().getFeatures(), {'dataProjection': 'EPSG:4326', 'featureProjection': 'EPSG:3857'});
     var streams_kml_filetext = kmlformat.writeFeatures(streams_layer.getSource().getFeatures(), {'dataProjection':'EPSG:4326','featureProjection': 'EPSG:3857'});
+    var upstream_kml_filetext = kmlformat.writeFeatures(upstream_layer.getSource().getFeatures(), {'dataProjection':'EPSG:4326','featureProjection': 'EPSG:3857'});
+    var downstream_kml_filetext = kmlformat.writeFeatures(downstream_layer.getSource().getFeatures(), {'dataProjection':'EPSG:4326','featureProjection': 'EPSG:3857'});
 
     $(this).prop('disabled', true);
     displayStatus.removeClass('error');
@@ -810,12 +850,13 @@ $('#hydroshare-proceed').on('click', function ()  {
             'HIS Referenced Time Series': 'RefTimeSeries',
             'Model Instance': 'ModelInstanceResource',
             'Model Program': 'ModelProgramResource',
-            'Multidimensional (NetCDF)': 'NetcdfResource', //not presently functional
+            'Multidimensional (NetCDF)': 'NetcdfResource',
             'Time Series': 'TimeSeriesResource',
             'Application': 'ToolResource'
         };
         return options[typeSelection];
     };
+
     var hydroUsername = $('#hydro-username').val();
     var hydroPassword = $('#hydro-password').val();
     var resourceAbstract = $('#resource-abstract').val();
@@ -837,6 +878,8 @@ $('#hydroshare-proceed').on('click', function ()  {
         data: {
                 'basin_kml_filetext': basin_kml_filetext,
                 'streams_kml_filetext': streams_kml_filetext,
+                'upstream_kml_filetext': upstream_kml_filetext,
+                'downstream_kml_filetext': downstream_kml_filetext,
                 'hs_username': hydroUsername,
                 'hs_password': hydroPassword,
                 'r_title': resourceTitle,

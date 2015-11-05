@@ -61,7 +61,7 @@ def home(request):
                                 multiple=False,
                                 options=[('Find Upstream/Downstream', 'select'), ('Upstream mainstem', 'UM'), ('Upstream with tributaries', 'UT'), ('Downstream mainstream', 'DM'), ('Downstream with divergences', 'DD')],
                                 original=['Find Upstream/Downstream'],
-                                attributes="id=select_navigation onchange=run_upstream_service()")
+                                attributes="id=select_navigation onclick=run_upstream_service()")
 
     # Pass variables to the template via the context dictionary
     context = {'map_options': map_options,
@@ -73,14 +73,16 @@ def home(request):
                 }
     return render(request, 'watershed_delin/home.html', context)
 
-
 def upload_to_hydroshare(request):
     temp_dir = None
     try:
         if request.method == 'POST':
             get_data = request.POST
+
             basin_kml_filetext = str(get_data['basin_kml_filetext'])
             streams_kml_filetext = str(get_data['streams_kml_filetext'])
+            upstream_kml_filetext = str(get_data['upstream_kml_filetext'])
+            downstream_kml_filetext = str(get_data['downstream_kml_filetext'])
             hs_username = str(get_data['hs_username'])
             hs_password = str(get_data['hs_password'])
             r_title = str(get_data['r_title'])
@@ -97,25 +99,35 @@ def upload_to_hydroshare(request):
             # test_id = '49d01b5b0d0a41b6a5a31d8aace0a36e'
             # hs.getResource(test_id, destination=None, unzip=False)
 
-            #download the iRODS file to a temp directory
+            #download the kml file to a temp directory
             temp_dir = tempfile.mkdtemp()
 
             basin_kml_file_path = os.path.join(temp_dir, "basin.kml")
             streams_kml_file_path = os.path.join(temp_dir, "streams.kml")
+            upstream_kml_file_path = os.path.join(temp_dir, "upstream.kml")
+            downstream_kml_file_path = os.path.join(temp_dir, "downstream.kml")
+
 
             with open(basin_kml_file_path, 'w') as fd:
-                    fd.write(basin_kml_filetext)
-            print basin_kml_filetext
+                        fd.write(basin_kml_filetext)
 
             with open(streams_kml_file_path, 'w') as fd:
                     fd.write(streams_kml_filetext)
-            print streams_kml_filetext
+
+            with open(upstream_kml_file_path, 'w') as fd:
+                    fd.write(upstream_kml_filetext)
+
+            with open(downstream_kml_file_path, 'w') as fd:
+                    fd.write(downstream_kml_filetext)
+
 
             #upload the temp file to HydroShare
             if os.path.exists(basin_kml_file_path):
                 basin_resource_id = hs.createResource(r_type, r_title, resource_file=basin_kml_file_path,
                                                       keywords=r_keywords, abstract=r_abstract)
                 resource_id = hs.addResourceFile(basin_resource_id, streams_kml_file_path)
+                resource_id = hs.addResourceFile(basin_resource_id, upstream_kml_file_path)
+                resource_id = hs.addResourceFile(basin_resource_id, downstream_kml_file_path)
             else:
                 if temp_dir:
                     # remove the temp directory/file
