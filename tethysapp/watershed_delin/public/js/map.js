@@ -1,8 +1,10 @@
 //variables related to the map
 var map, start_point_layer, click_point_layer, end_point_layer, indexing_path_layer, flow_lines_layer;
 var basin_layer, streams_layer;
+var upstream_layer, downstream_layer;
 var flag_geocoded;
-
+var resAbstr, upAbstract, downAbstract;
+var USRivers;
 var baseMapLayer=null;
 
 //variables related to the delineation process
@@ -13,8 +15,7 @@ $(document).ready(function () {
     //hide the delineate and download buttons at first
     hide_buttons();
     $('#resource-keywords').tagsinput({confirmKeys: [32, 44]});
-
-/*    var esri = new ol.layer.Tile({
+    /*    var esri = new ol.layer.Tile({
         source: new ol.source.XYZ({
             attribution: [new ol.Attribution({
                 html: 'Tiles &copy; <a href="http://services.arcgisonline.com/ArcGIS/' +
@@ -62,24 +63,37 @@ $(document).ready(function () {
         })
     });
 
-    click_point_layer = new ol.layer.Vector({
-      source: new ol.source.Vector(),
-      style: new ol.style.Style({
-        fill: new ol.style.Fill({
-          color: 'rgba(255, 255, 255, 0.2)'
-        }),
-        stroke: new ol.style.Stroke({
-          color: '#ffcc33',
-          width: 2
-        }),
-        image: new ol.style.Circle({
-          radius: 7,
-          fill: new ol.style.Fill({
-            color: '#ffcc33'
-          })
+    var urlTemplate = 'http://141.142.168.31/arcgis/rest/services/hydro/NFIEGeoNational_flowline/MapServer/tile/{z}/{y}/{x}';
+
+    USRivers = new ol.layer.Tile({
+        source: new ol.source.XYZ({
+            tilesize : 256,
+            tileUrlFunction: function(tileCoord) {
+            return urlTemplate.replace('{z}', tileCoord[0].toString())
+                            .replace('{x}', tileCoord[1].toString())
+                            .replace('{y}', tileCoord[2].toString());
+            }
+            })
         })
-      })
-    });
+
+    click_point_layer = new ol.layer.Vector({
+        source: new ol.source.Vector(),
+        style: new ol.style.Style({
+            fill: new ol.style.Fill({
+                color: 'rgba(255, 255, 255, 0.2)'
+            }),
+            stroke: new ol.style.Stroke({
+                color: '#ffcc33',
+                width: 2
+            }),
+            image: new ol.style.Circle({
+                radius: 7,
+                fill: new ol.style.Fill({
+                    color: '#ffcc33'
+                })
+            })
+        })
+    })
 
     start_point_layer = new ol.layer.Vector({
         source: new ol.source.Vector(),
@@ -195,9 +209,49 @@ $(document).ready(function () {
         })
     });
 
+    upstream_layer = new ol.layer.Vector({
+        source: new ol.source.Vector(),
+        style: new ol.style.Style({
+            fill: new ol.style.Fill({
+                color: 'rgba(0,0,255,0.6)'
+            }),
+            stroke: new ol.style.Stroke({
+                color: '#00ffff',
+                width: 2
+            }),
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: '#00ffff'
+                })
+            })
+        })
+    });
+
+    downstream_layer = new ol.layer.Vector({
+        source: new ol.source.Vector(),
+        style: new ol.style.Style({
+            fill: new ol.style.Fill({
+                color: 'rgba(0,0,255,0.6)'
+            }),
+            stroke: new ol.style.Stroke({
+                color: '#00ffff',
+                width: 2
+            }),
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: '#00ffff'
+                })
+            })
+        })
+    });
+
+
     //set bing map as base map
     baseMapLayer=bing_layer;
     map.addLayer(baseMapLayer);
+    map.addLayer(USRivers);
     map.addLayer(click_point_layer);
     map.addLayer(start_point_layer);
     map.addLayer(end_point_layer);
@@ -205,6 +259,8 @@ $(document).ready(function () {
     map.addLayer(flow_lines_layer);
     map.addLayer(basin_layer);
     map.addLayer(streams_layer);
+    map.addLayer(upstream_layer);
+    map.addLayer(downstream_layer);
 
     find_current_location();
 
@@ -289,7 +345,7 @@ function addClickPoint(coordinates){
 
 function hide_buttons() {
     document.getElementById("btnDelineate").style.visibility="hidden";
-    document.getElementById("btnUpstream").style.visibility="hidden";
+    document.getElementById("select_navigation").style.visibility="hidden";
     document.getElementById("btnDownload").style.visibility="hidden";
     document.getElementById("btnUpload").style.visibility="hidden";
     document.getElementById("delineation_output").innerHTML="";
@@ -302,6 +358,8 @@ function clear_location_layers() {
     flow_lines_layer.getSource().clear();
     basin_layer.getSource().clear();
     streams_layer.getSource().clear();
+    upstream_layer.getSource().clear();
+    downstream_layer.getSource().clear();
 }
 
 function CenterMap(lat,lon){
@@ -347,52 +405,6 @@ function run_point_indexing_service(lonlat) {
     // success or error functions. So the actual actions upon success all
     // happen in the success function.
 }
-function run_point_indexing_service(lonlat) {
-    var inputLon = lonlat[0];
-    var inputLat = lonlat[1];
-    var wktval = "POINT(" + inputLon + " " + inputLat + ")";
-
-    var options = {
-        "success" : "pis_success",
-        "error"   : "pis_error",
-        "timeout" : 60 * 1000
-    };
-
-    var data = {
-        "pGeometry": wktval,
-        "pGeometryMod": "WKT,SRSNAME=urn:ogc:def:crs:OGC::CRS84",
-        "pPointIndexingMethod": "DISTANCE",
-        "pPointIndexingMaxDist": 10,
-        "pOutputPathFlag": "TRUE",
-        "pReturnFlowlineGeomFlag": "FULL",
-        "optOutCS": "SRSNAME=urn:ogc:def:crs:OGC::CRS84",
-        "optOutPrettyPrint": 0,
-        "optClientRef": "CodePen"
-    };
-    hide_buttons();
-    clear_location_layers();
-    waiting_pis();
-    rtnStr = WATERS.Services.PointIndexingService(data, options);
-    // The service runs and when it is done, ti will call either the
-    // success or error functions. So the actual actions upon success all
-    // happen in the success function.
-}
-
-function report_failed_search(MessageText){
-    //Set the message of the bad news
-    document.getElementById("search_output").innerHTML = "<strong>Search Results:</strong><br>" + MessageText;
-   // hide_buttons();
-   // clear_location_layers();
-    gnis_name = null;
-    map.getView().setZoom(4);
-
-    if(flag_geocoded==false) {
-        //reverse geocode our click point so the search box isn't empty
-        var coord = click_point_layer.getSource().getFeatures()[0].getGeometry().getCoordinates();
-        var LLcoord = ol.proj.transform(coord,'EPSG:3857','EPSG:4326');
-        reverse_geocode(LLcoord);
-    }
-}
 
 function pis_success(result, textStatus) {
     document.getElementById("search_output").innerHTML = '';
@@ -434,7 +446,7 @@ function pis_success(result, textStatus) {
 
     //turn on the delineate button and turn off the download button and clear delin results
     document.getElementById("btnDelineate").style.visibility="visible";
-    //document.getElementById("btnUpstream").style.visibility="visible";
+    document.getElementById("select_navigation").style.visibility="visible";
     document.getElementById("delineation_output").innerHTML="";
 
     var coord = end_point_layer.getSource().getFeatures()[0].getGeometry().getCoordinates();
@@ -457,10 +469,25 @@ function pis_error(XMLHttpRequest, textStatus, errorThrown) {
     report_failed_search(textStatus);
 }
 
+function report_failed_search(MessageText){
+    //Set the message of the bad news
+    document.getElementById("search_output").innerHTML = "<strong>Search Results:</strong><br>" + MessageText;
+
+    gnis_name = null;
+    map.getView().setZoom(4);
+
+    if(flag_geocoded==false) {
+        //reverse geocode our click point so the search box isn't empty
+        var coord = click_point_layer.getSource().getFeatures()[0].getGeometry().getCoordinates();
+        var LLcoord = ol.proj.transform(coord,'EPSG:3857','EPSG:4326');
+        reverse_geocode(LLcoord);
+    }
+}
+
 //Delineate watershed button, function of navigation delineation service
 
 function geojson2feature(myGeoJSON) {
-    //Convert GeoJSON object into an OpenLayers 3 feature.
+        //Convert GeoJSON object into an OpenLayers 3 feature.
     //Also force jquery coordinates into real js Array if needed
     var geojsonformatter = new ol.format.GeoJSON;
     if (myGeoJSON.coordinates instanceof Array == false) {
@@ -470,6 +497,7 @@ function geojson2feature(myGeoJSON) {
     myGeometry.transform('EPSG:4326','EPSG:3857');
     var myFeature = new ol.Feature(myGeometry);
     return myFeature;
+
 }
 
 function run_navigation_delineation_service(){
@@ -496,8 +524,10 @@ function run_navigation_delineation_service(){
     //this will start the service. If it succeeds, it will call nds_success.
 }
 
+
 function nds_success(result, textStatus) {
-    document.getElementById("delineation_output").innerHTML = '';
+
+   document.getElementById("delineation_output").innerHTML = '';
 
     var srv_rez = result.output;
 
@@ -530,6 +560,21 @@ function nds_success(result, textStatus) {
         var success_text = "<strong>Delineation Results:</strong><br>" +
                             "Watershed Area = " + basin_area + " sq-km<br>" +
                             "Stream Segments = " + stream_count;
+
+        resAbstr = 'This resource contains automatically created KML files representing a watershed boundary and ' +
+            'stream network delineated by the EPA Waters Services using the Tethys EPA Waters Services web app. ' +
+            'National Hydrologic Dataset (NHD) stream outlet details:' + 'Feature Name = ' + gnis_name +
+            ', Reach Code = ' + reachcode +', Measure = ' + fmeasure +
+            ', HUC 12 = ' + wbd_huc12 + '. Delineation Results: Watershed Area = ' + basin_area + ' sq-km. ' +
+            'Stream Segments = ' + stream_count +'.';
+
+        if( upstream_layer.getSource().getFeatures().length> 0){
+            $('#resource-abstract').val(resAbstr+upAbstract);
+        }else if(downstream_layer.getSource().getFeatures().length> 0){
+            $('#resource-abstract').val(resAbstr+downAbstract);}
+        else{
+            $('#resource-abstract').val(resAbstr);}
+
         document.getElementById("delineation_output").innerHTML = success_text;
         document.getElementById("btnDownload").style.visibility="visible";
         document.getElementById("btnUpload").style.visibility="visible";
@@ -547,8 +592,19 @@ function report_failed_delineation(textMessage) {
     document.getElementById("delineation_output").innerHTML = "<strong>Delineation Error:</strong><br>" + textMessage;
 }
 
+
 //function of upstream service
+
 function run_upstream_service(){
+
+    dropdown_obj=document.getElementById("select_navigation");
+    selected_index=dropdown_obj.selectedIndex;
+    selected_value=dropdown_obj.options[selected_index].value;
+
+    if (selected_value == "select"){
+        return;
+    }
+
     var options = {
         "success": "us_success",
         "error": "us_error",
@@ -557,100 +613,96 @@ function run_upstream_service(){
     };
 
     var data = {
-        "pNavigationType": "UT",
+        "pNavigationType": selected_value,
         "pStartComid": comid,
         "pStartMeasure": fmeasure,
         "pTraversalSummary" : "TRUE",
         "pFlowlinelist" : "TRUE",
-        "pEventList" : WATERS.Helpers.GetFieldValue("dz_programs"),
-        "pEventListMod": ",",
         "pStopDistancekm": 1000,
         "optNHDPlusDataset": "2.1"
-
     };
 
     waiting_us();
     rtnStr = WATERS.Services.UpstreamDownstreamService(data, options);
     //this will start the service. If it succeeds, it will call us_success.
-
 }
 
 function us_success(result, textStatus) {
-    document.getElementById("upstream_output").innerHTML = '';
+
+    document.getElementById("up_down_output").innerHTML = '';
 
     var srv_rez = result.output;
 
     if (srv_rez == null) {
         if (result.status.status_message !== null) {
-            report_failed_upstream(result.status.status_message);
+            document.getElementById("up_down_output").innerHTML = result.status.status_message;
         } else {
-            report_failed_upstream("No results found")
+            document.getElementById("up_down_output").innerHTML = "No results found";
         }
     } else {
 
-        var srv_events = result.output.events_encountered;
+        upstream_layer.getSource().clear();
+        downstream_layer.getSource().clear();
 
-        function drawTable() {
-            var tableData = new google.visualization.DataTable();
-            tableData.addColumn('string', 'Water Program');
-            tableData.addColumn('string', 'Event Comid');
-            tableData.addColumn('string', 'Event Source FeatureID');
-            tableData.addColumn('string', 'Event Reach Code');
-            tableData.addColumn('string', 'Event From Measure');
-            tableData.addColumn('string', 'Event To Measure');
+        dropdown_obj=document.getElementById("select_navigation");
+        selected_index=dropdown_obj.selectedIndex;
+        selected_value=dropdown_obj.options[selected_index].value;
 
-            var rowIndex = 0;
-            var output = document.getElementById("output");
-            var distance = Math.round(srv_rez.total_distance * 1000) / 1000;
+        var srv_fl  = result.output.flowlines_traversed;
 
-            for (index in srv_events) {
-                tableData.addRows(1);
-                var colIndex = 0;
-                tableData.setCell(rowIndex, colIndex++, WATERS.Helpers.Abbr2Program(srv_events[index].source_program));
-                tableData.setCell(rowIndex, colIndex++, srv_events[index].evtcomid.toString());
-                tableData.setCell(rowIndex, colIndex++, srv_events[index].source_featureid);
-                tableData.setCell(rowIndex, colIndex++, srv_events[index].reachcode);
-                if (srv_events[index].from_measure == -1) {
-                    tableData.setCell(rowIndex, colIndex++, srv_events[index].start_measure.toString());
-                    tableData.setCell(rowIndex, colIndex++, " ");
-                } else {
-                    tableData.setCell(rowIndex, colIndex++, srv_events[index].from_measure.toString());
-                    tableData.setCell(rowIndex, colIndex++, srv_events[index].to_measure.toString());
-                }
-                rowIndex++;
+        if (selected_value == "UT" ||selected_value == "UM"){
+            for ( i in result.output.flowlines_traversed) {
+                upstream_layer.getSource().addFeature(geojson2feature(result.output.flowlines_traversed[i].shape));
             }
+            var stream_count = upstream_layer.getSource().getFeatures().length;
+            var success_text = "<strong>Results:</strong><br>" +
+                            "Stream Segments = " + stream_count;
+            map.getView().fitExtent(upstream_layer.getSource().getExtent(), map.getSize());
 
-            var table = new google.visualization.Table(output);
-            table.draw(
-                tableData,
-                {
-                    showRowNumber: true,
-                    allowHtml: true,
-                    sortColumn: 1,
-                    page: "enable",
-                    pageSize: Math.floor((document.body.clientHeight - 135) / 19)
-                }
-            );
+            upAbstract = 'This resource contains automatically created kml file representing upstream of this point '
+                +'queried by the EPA Waters Service using the Tethys EPA Waters Service web app. '+ 'Upstream Results: '
+                +'Stream Segments = ' + stream_count +'.';
+
+            if( basin_layer.getSource().getFeatures().length> 0){
+                $('#resource-abstract').val(resAbstr+upAbstract);
+            }else{
+                $('#resource-abstract').val(upAbstract);}
+        }else{
+            for ( i in result.output.flowlines_traversed) {
+                downstream_layer.getSource().addFeature(geojson2feature(result.output.flowlines_traversed[i].shape));
+            }
+            var stream_count = downstream_layer.getSource().getFeatures().length;
+            var success_text = "<strong>Results:</strong><br>" +
+                            "Stream Segments = " + stream_count;
+
+            downAbstract = 'This resource contains automatically created kml file representing downstream of this point '
+                +'queried by the EPA Waters Service using the Tethys EPA Waters Service web app. '+ 'Downstream Results: '
+                +'Stream Segments = ' + stream_count +'.';
+
+            if( basin_layer.getSource().getFeatures().length> 0){
+                $('#resource-abstract').val(resAbstr+downAbstract);
+            }else{
+                $('#resource-abstract').val(downAbstract);}
+
+            map.getView().fitExtent(downstream_layer.getSource().getExtent(), map.getSize());
         }
 
-        google.load('visualization', '1', {packages: ['table'], callback: drawTable});
 
-        var srv_fl = result.output.flowlines_traversed
-        for (i in srv_fl) {
-            flowlines.addFeatures(geojson2feature(srv_fl[i].shape));
-        }
-        flowlines.refresh();
+        document.getElementById("up_down_output").innerHTML = success_text;
+        document.getElementById("btnDownload").style.visibility="visible";
+        document.getElementById("btnUpload").style.visibility="visible";
 
-        for (i in srv_events) {
-            rad_303d.addFeatures(geojson2feature(srv_events[i].shape));
-        }
-        rad_303d.refresh();
     }
-
-    $tabs.tabs("option", "disabled", []);
-    $tabs.tabs("select", "results");
 }
 
+function us_error(XMLHttpRequest, textStatus, errorThrown) {
+    report_failed_upstream(textStatus);
+
+}
+
+function report_failed_upstream(textMessage) {
+    document.getElementById("up_down_output").innerHTML = "<strong>Upstream Query Error:</strong><br>" + textMessage;
+}
 
 
 // Show a point in the map of the location inputted in the search box,
@@ -697,6 +749,8 @@ function reverse_geocode_success(results, status) {
             location = gnis_name + ", " + location;
         }
         document.getElementById("txtLocation").value = location;
+        var resourceTitle = 'Watershed at '+ location;
+        $('#resource-title').val(resourceTitle);
     } else {
         document.getElementById("txtLocation").value = "Location Not Available";
     }
@@ -714,8 +768,18 @@ function handle_search_key(e) {
 
 function run_download_results() {
     //Download sasin and streams features
-    download_features("basin.kml",basin_layer.getSource().getFeatures());
-    download_features("streams.kml", streams_layer.getSource().getFeatures());
+    if(basin_layer.getSource().getFeatures().length != 0) {
+        download_features("basin.kml", basin_layer.getSource().getFeatures());
+    }
+    if(streams_layer.getSource().getFeatures().length != 0) {
+        download_features("streams.kml", streams_layer.getSource().getFeatures());
+    }
+    if(upstream_layer.getSource().getFeatures().length != 0) {
+        download_features("upstream.kml", upstream_layer.getSource().getFeatures());
+    }
+    if(downstream_layer.getSource().getFeatures().length != 0) {
+        download_features("downstream.kml", downstream_layer.getSource().getFeatures());
+    }
 }
 
 function download_features(filename, features) {
@@ -780,11 +844,14 @@ $.ajaxSetup({
         }
     }
 });
-$('#hydroshare-proceed').on('click', function () {
-       //This function only works on HTML5 browsers.
+
+$('#hydroshare-proceed').on('click', function ()  {
+           //This function only works on HTML5 browsers.
     var kmlformat = new ol.format.KML();
-    var basin_kml_filetext = kmlformat.writeFeatures(basin_layer.getSource().getFeatures(), {'dataProjection':'EPSG:4326','featureProjection': 'EPSG:3857'});
+    var basin_kml_filetext = kmlformat.writeFeatures(basin_layer.getSource().getFeatures(), {'dataProjection': 'EPSG:4326', 'featureProjection': 'EPSG:3857'});
     var streams_kml_filetext = kmlformat.writeFeatures(streams_layer.getSource().getFeatures(), {'dataProjection':'EPSG:4326','featureProjection': 'EPSG:3857'});
+    var upstream_kml_filetext = kmlformat.writeFeatures(upstream_layer.getSource().getFeatures(), {'dataProjection':'EPSG:4326','featureProjection': 'EPSG:3857'});
+    var downstream_kml_filetext = kmlformat.writeFeatures(downstream_layer.getSource().getFeatures(), {'dataProjection':'EPSG:4326','featureProjection': 'EPSG:3857'});
 
     $(this).prop('disabled', true);
     displayStatus.removeClass('error');
@@ -797,12 +864,13 @@ $('#hydroshare-proceed').on('click', function () {
             'HIS Referenced Time Series': 'RefTimeSeries',
             'Model Instance': 'ModelInstanceResource',
             'Model Program': 'ModelProgramResource',
-            'Multidimensional (NetCDF)': 'NetcdfResource', //not presently functional
+            'Multidimensional (NetCDF)': 'NetcdfResource',
             'Time Series': 'TimeSeriesResource',
             'Application': 'ToolResource'
         };
         return options[typeSelection];
     };
+
     var hydroUsername = $('#hydro-username').val();
     var hydroPassword = $('#hydro-password').val();
     var resourceAbstract = $('#resource-abstract').val();
@@ -824,6 +892,8 @@ $('#hydroshare-proceed').on('click', function () {
         data: {
                 'basin_kml_filetext': basin_kml_filetext,
                 'streams_kml_filetext': streams_kml_filetext,
+                'upstream_kml_filetext': upstream_kml_filetext,
+                'downstream_kml_filetext': downstream_kml_filetext,
                 'hs_username': hydroUsername,
                 'hs_password': hydroPassword,
                 'r_title': resourceTitle,
@@ -862,18 +932,18 @@ $('#hydroshare-proceed').on('click', function () {
 
 function waiting_pis() {
     var wait_text = "<strong>Loading...</strong><br>" +
-        "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='/static/watershed_delin/images/satellite_97.gif'>";
+        "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='/static/watershed_delin/images/earth_globe.gif'>";
     document.getElementById('search_output').innerHTML = wait_text;
 }
 
 function waiting_nds() {
     var wait_text = "<strong>Loading...</strong><br>" +
-        "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='/static/watershed_delin/images/satellite_97.gif'>";
+        "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='/static/watershed_delin/images/earth_globe.gif'>";
     document.getElementById('delineation_output').innerHTML = wait_text;
 }
 
 function waiting_us() {
     var wait_text = "<strong>Loading...</strong><br>" +
-        "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='/static/watershed_delin/images/satellite_97.gif'>";
-    document.getElementById('upstream_output').innerHTML = wait_text;
+        "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='/static/watershed_delin/images/earth_globe.gif'>";
+    document.getElementById('up_down_output').innerHTML = wait_text;
 }

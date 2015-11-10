@@ -10,8 +10,9 @@ from tethys_apps.sdk.gizmos import Button, TextInput, SelectInput
 from hs_restclient import HydroShare, HydroShareAuthBasic
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
 
-
+@login_required
 def home(request):
     """
     Controller for the app home page.
@@ -38,7 +39,7 @@ def home(request):
                             multiple=False,
                             options=[('Bing', 'bing_layer'), ('MapQuest', 'mapQuest_layer'), ('OpenStreet', 'openstreet_layer'), ('Stamen', 'stamen_layer')],
                             original=['Bing'],
-                           attributes="id=selectInput onchange=run_select_basemap()")
+                            attributes="id=selectInput onchange=run_select_basemap()")
 
     txtLocation = TextInput(display_text='Location Search:',
                     name="txtLocation",
@@ -56,10 +57,12 @@ def home(request):
                         attributes="id=btnDelineate onclick=run_navigation_delineation_service();",
                         submit=False)
 
-    btnUpstream = Button(display_text="Find Upstream",
-                        name="btnUpstream",
-                        attributes="id=btnUpstream onclick=run_upstream_service();",
-                        submit=False)
+    select_navigation = SelectInput(display_text="",
+                                name='select_navigation',
+                                multiple=False,
+                                options=[('Find Upstream/Downstream', 'select'), ('Upstream mainstem', 'UM'), ('Upstream with tributaries', 'UT'), ('Downstream mainstream', 'DM'), ('Downstream with divergences', 'DD')],
+                                original=['Find Upstream/Downstream'],
+                                attributes="id=select_navigation onclick=run_upstream_service()")
 
     # Pass variables to the template via the context dictionary
     context = {'map_options': map_options,
@@ -67,18 +70,21 @@ def home(request):
                'txtLocation': txtLocation,
                'btnSearch': btnSearch,
                'btnDelineate': btnDelineate,
-               'btnUpstream': btnUpstream,
+               'select_navigation': select_navigation
                 }
     return render(request, 'watershed_delin/home.html', context)
 
-
+@login_required
 def upload_to_hydroshare(request):
     temp_dir = None
     try:
         if request.method == 'POST':
             get_data = request.POST
+
             basin_kml_filetext = str(get_data['basin_kml_filetext'])
             streams_kml_filetext = str(get_data['streams_kml_filetext'])
+            upstream_kml_filetext = str(get_data['upstream_kml_filetext'])
+            downstream_kml_filetext = str(get_data['downstream_kml_filetext'])
             hs_username = str(get_data['hs_username'])
             hs_password = str(get_data['hs_password'])
             r_title = str(get_data['r_title'])
@@ -87,6 +93,7 @@ def upload_to_hydroshare(request):
             r_keywords_raw = str(get_data['r_keywords'])
             r_keywords = r_keywords_raw.split(',')
 
+            print hs_username, hs_password
             #startup a Hydroshare instance with user's credentials
             auth = HydroShareAuthBasic(username=hs_username, password=hs_password)
             hs = HydroShare(auth=auth, hostname="alpha.hydroshare.org", use_https=True)
@@ -94,21 +101,35 @@ def upload_to_hydroshare(request):
             # test_id = '49d01b5b0d0a41b6a5a31d8aace0a36e'
             # hs.getResource(test_id, destination=None, unzip=False)
 
-            #download the iRODS file to a temp directory
+            #download the kml file to a temp directory
             temp_dir = tempfile.mkdtemp()
 
             basin_kml_file_path = os.path.join(temp_dir, "basin.kml")
             streams_kml_file_path = os.path.join(temp_dir, "streams.kml")
+            upstream_kml_file_path = os.path.join(temp_dir, "upstream.kml")
+            downstream_kml_file_path = os.path.join(temp_dir, "downstream.kml")
+
 
             with open(basin_kml_file_path, 'w') as fd:
-                    fd.write(basin_kml_filetext)
+                        fd.write(basin_kml_filetext)
+
             with open(streams_kml_file_path, 'w') as fd:
                     fd.write(streams_kml_filetext)
+
+            with open(upstream_kml_file_path, 'w') as fd:
+                    fd.write(upstream_kml_filetext)
+
+            with open(downstream_kml_file_path, 'w') as fd:
+                    fd.write(downstream_kml_filetext)
+
+
             #upload the temp file to HydroShare
             if os.path.exists(basin_kml_file_path):
                 basin_resource_id = hs.createResource(r_type, r_title, resource_file=basin_kml_file_path,
                                                       keywords=r_keywords, abstract=r_abstract)
                 resource_id = hs.addResourceFile(basin_resource_id, streams_kml_file_path)
+                resource_id = hs.addResourceFile(basin_resource_id, upstream_kml_file_path)
+                resource_id = hs.addResourceFile(basin_resource_id, downstream_kml_file_path)
             else:
                 if temp_dir:
                     # remove the temp directory/file
