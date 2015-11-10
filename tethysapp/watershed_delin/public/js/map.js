@@ -4,7 +4,7 @@ var basin_layer, streams_layer;
 var upstream_layer, downstream_layer;
 var flag_geocoded;
 var resAbstr, upAbstract, downAbstract;
-
+var USRivers;
 var baseMapLayer=null;
 
 //variables related to the delineation process
@@ -63,24 +63,37 @@ $(document).ready(function () {
         })
     });
 
-    click_point_layer = new ol.layer.Vector({
-      source: new ol.source.Vector(),
-      style: new ol.style.Style({
-        fill: new ol.style.Fill({
-          color: 'rgba(255, 255, 255, 0.2)'
-        }),
-        stroke: new ol.style.Stroke({
-          color: '#ffcc33',
-          width: 2
-        }),
-        image: new ol.style.Circle({
-          radius: 7,
-          fill: new ol.style.Fill({
-            color: '#ffcc33'
-          })
+    var urlTemplate = 'http://141.142.168.31/arcgis/rest/services/hydro/NFIEGeoNational_flowline/MapServer/tile/{z}/{y}/{x}';
+
+    USRivers = new ol.layer.Tile({
+        source: new ol.source.XYZ({
+            tilesize : 256,
+            tileUrlFunction: function(tileCoord) {
+            return urlTemplate.replace('{z}', tileCoord[0].toString())
+                            .replace('{x}', tileCoord[1].toString())
+                            .replace('{y}', tileCoord[2].toString());
+            }
+            })
         })
-      })
-    });
+
+    click_point_layer = new ol.layer.Vector({
+        source: new ol.source.Vector(),
+        style: new ol.style.Style({
+            fill: new ol.style.Fill({
+                color: 'rgba(255, 255, 255, 0.2)'
+            }),
+            stroke: new ol.style.Stroke({
+                color: '#ffcc33',
+                width: 2
+            }),
+            image: new ol.style.Circle({
+                radius: 7,
+                fill: new ol.style.Fill({
+                    color: '#ffcc33'
+                })
+            })
+        })
+    })
 
     start_point_layer = new ol.layer.Vector({
         source: new ol.source.Vector(),
@@ -238,6 +251,7 @@ $(document).ready(function () {
     //set bing map as base map
     baseMapLayer=bing_layer;
     map.addLayer(baseMapLayer);
+    map.addLayer(USRivers);
     map.addLayer(click_point_layer);
     map.addLayer(start_point_layer);
     map.addLayer(end_point_layer);

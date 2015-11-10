@@ -10,8 +10,9 @@ from tethys_apps.sdk.gizmos import Button, TextInput, SelectInput
 from hs_restclient import HydroShare, HydroShareAuthBasic
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
 
-
+@login_required
 def home(request):
     """
     Controller for the app home page.
@@ -73,6 +74,7 @@ def home(request):
                 }
     return render(request, 'watershed_delin/home.html', context)
 
+@login_required
 def upload_to_hydroshare(request):
     temp_dir = None
     try:
