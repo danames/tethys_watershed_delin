@@ -32,7 +32,6 @@ def home(request):
                           view=view_options,
                           legend=False)
 
-
      # Pre-populate lat-picker and lon_picker from model
     select_input = SelectInput(display_text='Basemap',
                             name='select_input',
@@ -52,24 +51,18 @@ def home(request):
                         attributes="onclick=run_geocoder();",
                         submit=False)
 
-    btnDelineate = Button(display_text="Delineate Watershed",
-                        name="btnDelineate",
-                        attributes="id=btnDelineate onclick=run_navigation_delineation_service();",
-                        submit=False)
-
     select_navigation = SelectInput(display_text="",
                                 name='select_navigation',
                                 multiple=False,
-                                options=[('Find Upstream/Downstream', 'select'), ('Upstream mainstem', 'UM'), ('Upstream with tributaries', 'UT'), ('Downstream mainstream', 'DM'), ('Downstream with divergences', 'DD')],
-                                original=['Find Upstream/Downstream'],
-                                attributes="id=select_navigation onclick=run_upstream_service()")
+                                options=[('Select EPA WATERS Service', 'select'), ('Delineate watershed','DeWa'), ('Upstream mainstem', 'UM'), ('Upstream with tributaries', 'UT'), ('Downstream mainstem', 'DM'), ('Downstream with divergences', 'DD')],
+                                original=['Select EPA WATERS Service'],
+                                attributes="id=select_navigation onchange=select_function();")
 
     # Pass variables to the template via the context dictionary
     context = {'map_options': map_options,
                'select_input': select_input,
                'txtLocation': txtLocation,
                'btnSearch': btnSearch,
-               'btnDelineate': btnDelineate,
                'select_navigation': select_navigation
                 }
     return render(request, 'watershed_delin/home.html', context)
@@ -96,7 +89,7 @@ def upload_to_hydroshare(request):
             print hs_username, hs_password
             #startup a Hydroshare instance with user's credentials
             auth = HydroShareAuthBasic(username=hs_username, password=hs_password)
-            hs = HydroShare(auth=auth, hostname="alpha.hydroshare.org", use_https=True)
+            hs = HydroShare(auth=auth, hostname="playground.hydroshare.org", use_https=True)
             # try to download a tiny file simply to test the user's credentials
             # test_id = '49d01b5b0d0a41b6a5a31d8aace0a36e'
             # hs.getResource(test_id, destination=None, unzip=False)

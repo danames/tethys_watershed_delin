@@ -3,18 +3,22 @@ var map, start_point_layer, click_point_layer, end_point_layer, indexing_path_la
 var basin_layer, streams_layer;
 var upstream_layer, downstream_layer;
 var flag_geocoded;
-var resAbstr, upAbstract, downAbstract;
+var resLoc, resAbstr, upAbstract, downAbstract;
+var resKwds,upKwds,downKwds;
 var USRivers;
 var baseMapLayer=null;
 
 //variables related to the delineation process
 var comid, fmeasure, reach_code, gnis_name, wbd_huc12;
 var displayStatus = $('#display-status');
+var popupDiv = $('#welcome-popup');
 
 $(document).ready(function () {
     //hide the delineate and download buttons at first
+
+    popupDiv.modal('show');
+
     hide_buttons();
-    $('#resource-keywords').tagsinput({confirmKeys: [32, 44]});
     /*    var esri = new ol.layer.Tile({
         source: new ol.source.XYZ({
             attribution: [new ol.Attribution({
@@ -270,6 +274,8 @@ $(document).ready(function () {
         flag_geocoded=false;
         var coordinate = evt.coordinate;
         addClickPoint(coordinate);
+        $("#select_navigation")[0][0].selected = true;
+        document.getElementById("waiting_output").innerHTML = '';
 
         var lonlat = ol.proj.transform(coordinate, 'EPSG:3857', 'EPSG:4326');
 
@@ -344,7 +350,7 @@ function addClickPoint(coordinates){
 }
 
 function hide_buttons() {
-    document.getElementById("btnDelineate").style.visibility="hidden";
+    //document.getElementById("btnDelineate").style.visibility="hidden";
     document.getElementById("select_navigation").style.visibility="hidden";
     document.getElementById("btnDownload").style.visibility="hidden";
     document.getElementById("btnUpload").style.visibility="hidden";
@@ -445,9 +451,10 @@ function pis_success(result, textStatus) {
     }
 
     //turn on the delineate button and turn off the download button and clear delin results
-    document.getElementById("btnDelineate").style.visibility="visible";
+    //document.getElementById("btnDelineate").style.visibility="visible";
     document.getElementById("select_navigation").style.visibility="visible";
     document.getElementById("delineation_output").innerHTML="";
+    document.getElementById("up_down_output").innerHTML="";
 
     var coord = end_point_layer.getSource().getFeatures()[0].getGeometry().getCoordinates();
     var LLcoord = ol.proj.transform(coord,'EPSG:3857','EPSG:4326');
@@ -456,7 +463,6 @@ function pis_success(result, textStatus) {
         //reverse geocode our click point so the search box isn't empty
         reverse_geocode(LLcoord);
     }
-
 
     //get a little closer if we are zoomed way out.
     if (map.getView().getZoom()<12) {
@@ -500,6 +506,25 @@ function geojson2feature(myGeoJSON) {
 
 }
 
+
+var value_selected;
+
+function select_function(){
+    dropdown_obj=document.getElementById("select_navigation");
+    selected_index=dropdown_obj.selectedIndex;
+    value_selected=dropdown_obj.options[selected_index].value;
+
+    if (value_selected == "select"){
+        return;
+    }
+    else if (value_selected == "DeWa"){
+        run_navigation_delineation_service();
+    }
+    else{
+        run_upstream_service();
+    }
+}
+
 function run_navigation_delineation_service(){
     var options = {
         "success": "nds_success",
@@ -524,10 +549,9 @@ function run_navigation_delineation_service(){
     //this will start the service. If it succeeds, it will call nds_success.
 }
 
-
 function nds_success(result, textStatus) {
 
-   document.getElementById("delineation_output").innerHTML = '';
+   document.getElementById("waiting_output").innerHTML = '';
 
     var srv_rez = result.output;
 
@@ -568,12 +592,19 @@ function nds_success(result, textStatus) {
             ', HUC 12 = ' + wbd_huc12 + '. Delineation Results: Watershed Area = ' + basin_area + ' sq-km. ' +
             'Stream Segments = ' + stream_count +'.';
 
+        resKwds =  resLoc+', Watershed, Delineation';
+
         if( upstream_layer.getSource().getFeatures().length> 0){
             $('#resource-abstract').val(resAbstr+upAbstract);
+            $('#resource-keywords').val(resKwds+', '+upKwds);
+
         }else if(downstream_layer.getSource().getFeatures().length> 0){
-            $('#resource-abstract').val(resAbstr+downAbstract);}
-        else{
-            $('#resource-abstract').val(resAbstr);}
+            $('#resource-abstract').val(resAbstr+downAbstract);
+            $('#resource-keywords').val(resKwds+', '+downKwds);
+        }else{
+            $('#resource-abstract').val(resAbstr);
+            $('#resource-keywords').val(resKwds)}
+
 
         document.getElementById("delineation_output").innerHTML = success_text;
         document.getElementById("btnDownload").style.visibility="visible";
@@ -585,6 +616,7 @@ function nds_success(result, textStatus) {
 }
 
 function nds_error(XMLHttpRequest, textStatus, errorThrown) {
+    document.getElementById("waiting_output").innerHTML = '';
     report_failed_delineation(textStatus);
 }
 
@@ -592,18 +624,9 @@ function report_failed_delineation(textMessage) {
     document.getElementById("delineation_output").innerHTML = "<strong>Delineation Error:</strong><br>" + textMessage;
 }
 
-
 //function of upstream service
 
 function run_upstream_service(){
-
-    dropdown_obj=document.getElementById("select_navigation");
-    selected_index=dropdown_obj.selectedIndex;
-    selected_value=dropdown_obj.options[selected_index].value;
-
-    if (selected_value == "select"){
-        return;
-    }
 
     var options = {
         "success": "us_success",
@@ -613,7 +636,7 @@ function run_upstream_service(){
     };
 
     var data = {
-        "pNavigationType": selected_value,
+        "pNavigationType": value_selected,
         "pStartComid": comid,
         "pStartMeasure": fmeasure,
         "pTraversalSummary" : "TRUE",
@@ -629,7 +652,7 @@ function run_upstream_service(){
 
 function us_success(result, textStatus) {
 
-    document.getElementById("up_down_output").innerHTML = '';
+    document.getElementById("waiting_output").innerHTML = '';
 
     var srv_rez = result.output;
 
@@ -650,39 +673,67 @@ function us_success(result, textStatus) {
 
         var srv_fl  = result.output.flowlines_traversed;
 
-        if (selected_value == "UT" ||selected_value == "UM"){
-            for ( i in result.output.flowlines_traversed) {
+        if (selected_value == "UT" ||selected_value == "UM") {
+            for (i in result.output.flowlines_traversed) {
                 upstream_layer.getSource().addFeature(geojson2feature(result.output.flowlines_traversed[i].shape));
             }
             var stream_count = upstream_layer.getSource().getFeatures().length;
-            var success_text = "<strong>Results:</strong><br>" +
-                            "Stream Segments = " + stream_count;
+            var success_text = "<strong>Upstream Results:</strong><br>" +
+                "Stream Segments = " + stream_count;
             map.getView().fitExtent(upstream_layer.getSource().getExtent(), map.getSize());
 
             upAbstract = 'This resource contains automatically created kml file representing upstream of this point '
-                +'queried by the EPA Waters Service using the Tethys EPA Waters Service web app. '+ 'Upstream Results: '
-                +'Stream Segments = ' + stream_count +'.';
+                + 'queried by the EPA Waters Service using the Tethys EPA Waters Service web app. ' + 'Upstream Results: '
+                + 'Stream Segments = ' + stream_count + '.';
 
-            if( basin_layer.getSource().getFeatures().length> 0){
-                $('#resource-abstract').val(resAbstr+upAbstract);
-            }else{
-                $('#resource-abstract').val(upAbstract);}
-        }else{
+            if (selected_value == "UT") {
+                upKwds = 'Upstream, Tributaries';
+            } else {
+                upKwds = 'Upstream, Mainstem';
+            }
+
+            if (basin_layer.getSource().getFeatures().length > 0) {
+                $('#resource-abstract').val(resAbstr + upAbstract);
+                $('#resource-keywords').val(resKwds + ', ' + upKwds)
+            }
+            else
+            {
+                $('#resource-abstract').val(upAbstract);
+                $('#resource-keywords').val(resLoc + ', ' + upKwds);
+            }
+        }
+        else
+        {
             for ( i in result.output.flowlines_traversed) {
                 downstream_layer.getSource().addFeature(geojson2feature(result.output.flowlines_traversed[i].shape));
             }
             var stream_count = downstream_layer.getSource().getFeatures().length;
-            var success_text = "<strong>Results:</strong><br>" +
+            var success_text = "<strong>Downstream Results:</strong><br>" +
                             "Stream Segments = " + stream_count;
 
             downAbstract = 'This resource contains automatically created kml file representing downstream of this point '
                 +'queried by the EPA Waters Service using the Tethys EPA Waters Service web app. '+ 'Downstream Results: '
                 +'Stream Segments = ' + stream_count +'.';
 
-            if( basin_layer.getSource().getFeatures().length> 0){
+            if (selected_value=="DM")
+            {
+                downKwds='Downstream, Mainstem';
+            }
+            else
+            {
+                downKwds='Downstream, Divergences';
+            }
+
+            if( basin_layer.getSource().getFeatures().length> 0)
+            {
                 $('#resource-abstract').val(resAbstr+downAbstract);
-            }else{
-                $('#resource-abstract').val(downAbstract);}
+                $('#resource-keywords').val(resKwds+', '+downKwds)
+            }
+            else
+            {
+                $('#resource-abstract').val(downAbstract);
+                $('#resource-keywords').val(resLoc + ', ' + downKwds)
+            }
 
             map.getView().fitExtent(downstream_layer.getSource().getExtent(), map.getSize());
         }
@@ -696,6 +747,7 @@ function us_success(result, textStatus) {
 }
 
 function us_error(XMLHttpRequest, textStatus, errorThrown) {
+    document.getElementById("waiting_output").innerHTML = '';
     report_failed_upstream(textStatus);
 
 }
@@ -749,8 +801,10 @@ function reverse_geocode_success(results, status) {
             location = gnis_name + ", " + location;
         }
         document.getElementById("txtLocation").value = location;
+        resLoc = location.split(",")[0];
         var resourceTitle = 'Watershed at '+ location;
         $('#resource-title').val(resourceTitle);
+
     } else {
         document.getElementById("txtLocation").value = "Location Not Available";
     }
@@ -795,7 +849,6 @@ function download_features(filename, features) {
     document.body.removeChild(element);
 }
 
-
 //This function is attached as an 'onclick' tag to the popup modal button button in home.html
 function clearUploadForm() {
     if (!($('#credentials-checkbox').is(":checked"))) {
@@ -810,21 +863,6 @@ function clearUploadForm() {
     displayStatus
         .removeClass('error uploading success')
         .empty();
-}
-
-function tagChange(event) { //added to $('#resource-keywords') as an 'onclick' function in home.html
-    var inputElement = $('.bootstrap-tagsinput').children('input');
-    var itemClicked = event.target || event.srcElement;
-    var itemId = itemClicked.id;
-    var jqueryIdCall = '#' + itemId;
-    if ($(jqueryIdCall).val() == "") {
-        inputElement.attr('placeholder', 'Separate each keyword with a space or comma');
-        inputElement.attr('style', 'width: 47em !important');
-    } else {
-        inputElement.removeAttr('placeholder');
-        inputElement.attr('style','width: 6em !important');
-
-    }
 }
 
 
@@ -939,11 +977,11 @@ function waiting_pis() {
 function waiting_nds() {
     var wait_text = "<strong>Loading...</strong><br>" +
         "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='/static/watershed_delin/images/earth_globe.gif'>";
-    document.getElementById('delineation_output').innerHTML = wait_text;
+    document.getElementById('waiting_output').innerHTML = wait_text;
 }
 
 function waiting_us() {
     var wait_text = "<strong>Loading...</strong><br>" +
         "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='/static/watershed_delin/images/earth_globe.gif'>";
-    document.getElementById('up_down_output').innerHTML = wait_text;
+    document.getElementById('waiting_output').innerHTML = wait_text;
 }

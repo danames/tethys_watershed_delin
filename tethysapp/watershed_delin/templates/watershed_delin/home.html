@@ -23,13 +23,13 @@
 
 <hr>
 
-{% gizmo button btnDelineate %}
+{% gizmo select_input select_navigation %}
 
 <div id="delineation_output"></div>
 
-{% gizmo select_input select_navigation %}
-
 <div id="up_down_output"></div>
+
+<div id="waiting_output"></div>
 
 <hr>
 
@@ -45,17 +45,60 @@
 
 {% endblock %}
 
+{% block app_content_wrapper_override %}
+<!-- Modal  -->
+<div class="modal fade" id="welcome-popup" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title">Welcome to the EPA WATERS Services!</h4>
+            </div>
+            <div class="modal-body">
+                <div id="welcome-info">
+                    <ol>
+                        <h6><li>Select point of interest</li></h6>
+                        <p>Click the map or input the location to identify a watershed outlet and stream reach of interest.</p>
+                        <h6><li>Select EPA WATERS Web Service</li></h6>
+                        <p>Five choices are listed in the “Select EPA WATERS Service” dropdown list.</p>
+                        <ul>
+                            <li>Delineate watershed</li>
+                            <li>Upstream mainstem</li>
+                            <li>Upstream with tributaries</li>
+                            <li>Downstream mainstream</li>
+                            <li>Downstream with divergences</li>
+                        </ul>
+                        <p>Once one service is selected, the results will be shown on the map with description shown below the dropdown list.</p>
+                        <h6><li>Download Results</li></h6>
+                        <p>
+                           Click the "Download Results" to download the results as kml files.
+                        </p>
+                        <h6><li>Upload to HydroShare</li></h6>
+                        <p>Click the "Upload to HydroShare" to upload the results to <a href='https://www.hydroshare.org/' target="_blank"> HydroShare</a>.
+                             </p>
+                        <h9>Note: This app uses the United States <a href='http://water.epa.gov/scitech/datait/tools/waters/services/' target="_blank">
+                                EPA WATERS Web and Database Services</a> and only
+                            works for watersheds and drainages in the continental United States and Hawaii.
+                        </h9>
+                    </ol>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" id="close-popup" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- End Modal -->
+{{block.super}}
+{% endblock %}
+
 
 {% block app_content %}
-  <p><strong>Instructions:</strong> Search for a location and/or click the map to identify a watershed outlet and stream reach of interest.
-    Then click the "Delineate Watershed" button.</p>
 
+  <button type="button" class="btn btn-default" data-toggle="modal" data-target="#welcome-popup">Instructions</button>
 
 {% gizmo map_view map_options %}
-
- <p><strong>Note:</strong> This app uses the United States
-    <a href='http://water.epa.gov/scitech/datait/tools/waters/services/' target="_blank">EPA WATERS Web and Database Services</a>
-    and only works for watersheds and drainages in the continental United States and Hawaii. </p>
 
 <!--
 <p>Remaining Tasks:</p>
@@ -118,9 +161,8 @@
                     <textarea rows="4" cols="50" id="resource-abstract" class="form-control"></textarea>
                 </div>
                 <div class="form-group">
-                    <label for="resource-keywords" class="control-label">*Resource Keywords:</label>
-                    <input class="form-control" id="resource-keywords" data-role="tagsinput"
-                           placeholder="Separate each keyword with a space or comma" onchange="tagChange(event)">
+                    <label for="resource-keywords" class="control-label">*Resource Keywords</label>
+                    <input type="text" class="form-control" id="resource-keywords">
                 </div>
             </div>
             <div class="modal-footer">
