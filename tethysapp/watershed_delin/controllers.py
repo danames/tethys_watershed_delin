@@ -4,7 +4,6 @@ import shutil
 import os
 import traceback
 
-sys.path.append('/usr/local/lib/python2.7/dist-packages')
 from tethys_gizmos.gizmo_options import MapView, MVLayer, MVView
 from tethys_apps.sdk.gizmos import Button, TextInput, SelectInput
 from hs_restclient import HydroShare, HydroShareAuthBasic

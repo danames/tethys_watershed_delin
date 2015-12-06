@@ -275,8 +275,7 @@ $(document).ready(function () {
         var coordinate = evt.coordinate;
         addClickPoint(coordinate);
         $("#select_navigation")[0][0].selected = true;
-        document.getElementById("waiting_output").innerHTML = '';
-
+        hide_buttons();
         var lonlat = ol.proj.transform(coordinate, 'EPSG:3857', 'EPSG:4326');
 
         //Each time the user clicks on the map, let's run the point
@@ -355,6 +354,8 @@ function hide_buttons() {
     document.getElementById("btnDownload").style.visibility="hidden";
     document.getElementById("btnUpload").style.visibility="hidden";
     document.getElementById("delineation_output").innerHTML="";
+    document.getElementById("up_down_output").innerHTML="";
+    document.getElementById("waiting_output").innerHTML = '';
 }
 
 function clear_location_layers() {
@@ -544,7 +545,7 @@ function run_navigation_delineation_service(){
         "optNHDPlusDataset": "2.1"
     };
 
-    waiting_nds();
+     waiting_output();
     rtnStr = WATERS.Services.NavigationDelineationService(data, options);
     //this will start the service. If it succeeds, it will call nds_success.
 }
@@ -592,7 +593,7 @@ function nds_success(result, textStatus) {
             ', HUC 12 = ' + wbd_huc12 + '. Delineation Results: Watershed Area = ' + basin_area + ' sq-km. ' +
             'Stream Segments = ' + stream_count +'.';
 
-        resKwds =  resLoc+', Watershed, Delineation';
+        resKwds = resLoc+', Watershed, Delineation';
 
         if( upstream_layer.getSource().getFeatures().length> 0){
             $('#resource-abstract').val(resAbstr+upAbstract);
@@ -603,7 +604,7 @@ function nds_success(result, textStatus) {
             $('#resource-keywords').val(resKwds+', '+downKwds);
         }else{
             $('#resource-abstract').val(resAbstr);
-            $('#resource-keywords').val(resKwds)}
+            $('#resource-keywords').val(resKwds);}
 
 
         document.getElementById("delineation_output").innerHTML = success_text;
@@ -645,7 +646,7 @@ function run_upstream_service(){
         "optNHDPlusDataset": "2.1"
     };
 
-    waiting_us();
+    waiting_output();
     rtnStr = WATERS.Services.UpstreamDownstreamService(data, options);
     //this will start the service. If it succeeds, it will call us_success.
 }
@@ -727,7 +728,7 @@ function us_success(result, textStatus) {
             if( basin_layer.getSource().getFeatures().length> 0)
             {
                 $('#resource-abstract').val(resAbstr+downAbstract);
-                $('#resource-keywords').val(resKwds+', '+downKwds)
+                $('#resource-keywords').val(resKwds+', '+downKwds);
             }
             else
             {
@@ -849,22 +850,6 @@ function download_features(filename, features) {
     document.body.removeChild(element);
 }
 
-//This function is attached as an 'onclick' tag to the popup modal button button in home.html
-function clearUploadForm() {
-    if (!($('#credentials-checkbox').is(":checked"))) {
-        $('#hydro-username').val('');
-        $('#hydro-password').val('');
-    }
-    $('#resource-title').val('');
-    $('#resource-abstract').val('');
-    $('#resource-keywords')
-        .val('')
-        .tagsinput('removeAll');
-    displayStatus
-        .removeClass('error uploading success')
-        .empty();
-}
-
 
 //Upload basin and streams kml file to hydroshare
 
@@ -967,20 +952,13 @@ $('#hydroshare-proceed').on('click', function ()  {
     });
 });
 
-
 function waiting_pis() {
     var wait_text = "<strong>Loading...</strong><br>" +
         "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='/static/watershed_delin/images/earth_globe.gif'>";
     document.getElementById('search_output').innerHTML = wait_text;
 }
 
-function waiting_nds() {
-    var wait_text = "<strong>Loading...</strong><br>" +
-        "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='/static/watershed_delin/images/earth_globe.gif'>";
-    document.getElementById('waiting_output').innerHTML = wait_text;
-}
-
-function waiting_us() {
+function waiting_output() {
     var wait_text = "<strong>Loading...</strong><br>" +
         "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='/static/watershed_delin/images/earth_globe.gif'>";
     document.getElementById('waiting_output').innerHTML = wait_text;

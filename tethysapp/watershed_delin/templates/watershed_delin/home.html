@@ -7,7 +7,6 @@
 {% block styles %}
 {{ block.super }}
 <link href="{% static 'watershed_delin/css/main.css' %}" rel="stylesheet"/>
-<link href="{% static 'watershed_delin/vendor/bootstrap-tagsinput/bootstrap-tagsinput.css' %}" rel="stylesheet"/>
 
 {% endblock %}
 
@@ -161,14 +160,14 @@
                     <textarea rows="4" cols="50" id="resource-abstract" class="form-control"></textarea>
                 </div>
                 <div class="form-group">
-                    <label for="resource-keywords" class="control-label">*Resource Keywords</label>
+                    <label for="resource-keywords" class="control-label">*Resource Keywords:</label>
                     <input type="text" class="form-control" id="resource-keywords">
                 </div>
             </div>
             <div class="modal-footer">
                 <div id="display-status" class="col-md-8"></div>
                 <div id="footer-buttons" class="col-md-4">
-                    <button type="button" class="btn btn-default footer" data-dismiss="modal" onclick="clearUploadForm()">Close</button>
+                    <button type="button" class="btn btn-default footer" data-dismiss="modal">Close</button>
                     <button type="button" class="btn btn-primary footer" id="hydroshare-proceed">Proceed</button>
                 </div>
             </div>
@@ -180,7 +179,6 @@
   <script src="{% static 'watershed_delin/js/jquery_cookie/jquery.cookie.js' %}"></script>
   <script src="{% static 'watershed_delin/js/map.js' %}"></script>
   <script src="{% static 'watershed_delin/js/WATERSServices-1.0.0-min.js' %}"></script>
-  <script src="{% static 'watershed_delin/vendor/bootstrap-tagsinput/bootstrap-tagsinput.min.js' %}"></script>
   <!--<script src='http://maps.google.com/maps?file=api&amp;v=2&amp;key=ABQIAAAAjpkAC9ePGem0lIq5XcMiuhR_wWLPFku8Ix9i2SXYRVK3e45q1BQUd_beF8dtzKET_EteAjPdGDwqpQ'></script>-->
      <script type="text/javascript"
              src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDPgvDUpbEwcbg9C0cRTfDtDa-Vj4WBwI0">
