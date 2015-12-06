@@ -88,7 +88,7 @@ def upload_to_hydroshare(request):
             print hs_username, hs_password
             #startup a Hydroshare instance with user's credentials
             auth = HydroShareAuthBasic(username=hs_username, password=hs_password)
-            hs = HydroShare(auth=auth, hostname="playground.hydroshare.org", use_https=True)
+            hs = HydroShare(auth=auth, hostname="www.hydroshare.org", use_https=True)
             # try to download a tiny file simply to test the user's credentials
             # test_id = '49d01b5b0d0a41b6a5a31d8aace0a36e'
             # hs.getResource(test_id, destination=None, unzip=False)
