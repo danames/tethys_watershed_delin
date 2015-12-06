@@ -7,10 +7,18 @@
 {% block styles %}
 {{ block.super }}
 <link href="{% static 'watershed_delin/css/main.css' %}" rel="stylesheet"/>
-
+<link rel="stylesheet" href="{% static 'watershed_delin/vendor/openlayers/v3.5.0-dist/ol.css' %}" type="text/css" />
+<style>
+    .ol-mouse-position {
+      top: 10px;
+      right: 40px;
+    }
+</style>
 {% endblock %}
 
 {% block app_navigation_items %}
+
+<button type="button" class="btn btn-default" data-toggle="modal" data-target="#welcome-popup">Instructions</button>
 
 {% gizmo select_input select_input %}
 
@@ -95,9 +103,9 @@
 
 {% block app_content %}
 
-  <button type="button" class="btn btn-default" data-toggle="modal" data-target="#welcome-popup">Instructions</button>
 
-{% gizmo map_view map_options %}
+
+<div id="map"></div>div>
 
 <!--
 <p>Remaining Tasks:</p>
@@ -179,6 +187,7 @@
   <script src="{% static 'watershed_delin/js/jquery_cookie/jquery.cookie.js' %}"></script>
   <script src="{% static 'watershed_delin/js/map.js' %}"></script>
   <script src="{% static 'watershed_delin/js/WATERSServices-1.0.0-min.js' %}"></script>
+  <script src="{% static 'watershed_delin/vendor/openlayers/v3.5.0-dist/ol.js' %}"></script>
   <!--<script src='http://maps.google.com/maps?file=api&amp;v=2&amp;key=ABQIAAAAjpkAC9ePGem0lIq5XcMiuhR_wWLPFku8Ix9i2SXYRVK3e45q1BQUd_beF8dtzKET_EteAjPdGDwqpQ'></script>-->
      <script type="text/javascript"
              src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDPgvDUpbEwcbg9C0cRTfDtDa-Vj4WBwI0">

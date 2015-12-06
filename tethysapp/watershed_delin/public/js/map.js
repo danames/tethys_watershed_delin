@@ -35,7 +35,23 @@ $(document).ready(function () {
     dropdown_obj=document.getElementById("select_input");
     dropdown_obj.selectedIndex=0;
 
-    map = TETHYS_MAP_VIEW.getMap();
+    //map = TETHYS_MAP_VIEW.getMap();
+
+
+    kansas_city_lonlat = [-94.5783, 39.0997]
+    kansas_city_3857 = ol.proj.transform(kansas_city_lonlat, 'EPSG:4326', 'EPSG:3857');
+
+    map = new ol.Map({
+	layers: [ ],
+	controls: ol.control.defaults(),
+	target: 'map',
+	view: new ol.View({
+		center: kansas_city_3857,
+		zoom: 5,
+        projection: "EPSG:3857"
+	})
+    });
+
 
     //remove the default openstreetmap that Tethys adds.
     map.getLayers().clear();
