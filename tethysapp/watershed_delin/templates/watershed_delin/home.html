@@ -19,6 +19,7 @@
 {% block app_navigation_items %}
 
 <button type="button" class="btn btn-default" data-toggle="modal" data-target="#welcome-popup">Instructions</button>
+<br><br>
 
 {% gizmo select_input select_input %}
 
@@ -64,10 +65,10 @@
             <div class="modal-body">
                 <div id="welcome-info">
                     <ol>
-                        <h6><li>Select point of interest</li></h6>
-                        <p>Click the map or input the location to identify a watershed outlet and stream reach of interest.</p>
-                        <h6><li>Select EPA WATERS Web Service</li></h6>
-                        <p>Five choices are listed in the “Select EPA WATERS Service” dropdown list.</p>
+                        <h6>1. Select point of interest</h6>
+                        <p>Click the map or search for a location to identify a watershed outlet and stream reach of interest</p>
+                        <h6>2. Run a EPA WATERS Web Service</h6>
+                        <p>Select one option from the “EPA WATERS Service” dropdown list to run an analysis. The results will be shown on map.</p>
                         <ul>
                             <li>Delineate watershed</li>
                             <li>Upstream mainstem</li>
@@ -75,14 +76,12 @@
                             <li>Downstream mainstream</li>
                             <li>Downstream with divergences</li>
                         </ul>
-                        <p>Once one service is selected, the results will be shown on the map with description shown below the dropdown list.</p>
-                        <h6><li>Download Results</li></h6>
+                        <h6>3. Download Results</h6>
                         <p>
-                           Click the "Download Results" to download the results as kml files.
+                           Click the "Download Results" to save results as kml files.
                         </p>
-                        <h6><li>Upload to HydroShare</li></h6>
-                        <p>Click the "Upload to HydroShare" to upload the results to <a href='https://www.hydroshare.org/' target="_blank"> HydroShare</a>.
-                             </p>
+                        <h6>4. Upload to HydroShare</h6>
+                        <p>Click the "Upload to HydroShare" and fill out the meatadata form. </p>
                         <h9>Note: This app uses the United States <a href='http://water.epa.gov/scitech/datait/tools/waters/services/' target="_blank">
                                 EPA WATERS Web and Database Services</a> and only
                             works for watersheds and drainages in the continental United States and Hawaii.
@@ -134,19 +133,6 @@
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label for="hydro-username" class="control-label">*Hydroshare Username:</label>
-                    <input type="text" class="form-control" id="hydro-username">
-                </div>
-                <div class="form-group">
-                    <label for="hydro-password" class="control-label">*Hydroshare Password:</label>
-                    <input type="password" class="form-control" id="hydro-password">
-                </div>
-                <div class="checkbox">
-                    <label>
-                        <input type="checkbox" id="credentials-checkbox">Remember me until page refresh (useful if uploading many files)
-                    </label>
-                </div>
-                <div class="form-group">
                     <label for="resource-title" class="control-label">*Resource Title:</label>
                     <input type="text" class="form-control" id="resource-title">
                 </div>
@@ -165,7 +151,7 @@
                 </div>
                 <div class="form-group">
                     <label for="resource-abstract" class="control-label">*Resource Abstract:</label>
-                    <textarea rows="4" cols="50" id="resource-abstract" class="form-control"></textarea>
+                    <textarea rows="6" cols="50" id="resource-abstract" class="form-control"></textarea>
                 </div>
                 <div class="form-group">
                     <label for="resource-keywords" class="control-label">*Resource Keywords:</label>

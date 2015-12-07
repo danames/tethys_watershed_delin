@@ -47,7 +47,7 @@ $(document).ready(function () {
 	target: 'map',
 	view: new ol.View({
 		center: kansas_city_3857,
-		zoom: 5,
+		zoom: 8,
         projection: "EPSG:3857"
 	})
     });
@@ -93,7 +93,8 @@ $(document).ready(function () {
                             .replace('{x}', tileCoord[1].toString())
                             .replace('{y}', tileCoord[2].toString());
             }
-            })
+            }),
+        maxResolution: 1000 // layer shows up when current view is greater than this scale (1:1000), like 1:800
         })
 
     click_point_layer = new ol.layer.Vector({
@@ -284,7 +285,7 @@ $(document).ready(function () {
 
     find_current_location();
 
-    map.getView().setZoom(4);
+    map.getView().setZoom(5);
 
     map.on('click', function(evt) {
         flag_geocoded=false;
@@ -892,7 +893,7 @@ $('#hydroshare-proceed').on('click', function ()  {
     var upstream_kml_filetext = kmlformat.writeFeatures(upstream_layer.getSource().getFeatures(), {'dataProjection':'EPSG:4326','featureProjection': 'EPSG:3857'});
     var downstream_kml_filetext = kmlformat.writeFeatures(downstream_layer.getSource().getFeatures(), {'dataProjection':'EPSG:4326','featureProjection': 'EPSG:3857'});
 
-    $(this).prop('disabled', true);
+
     displayStatus.removeClass('error');
     displayStatus.addClass('uploading');
     displayStatus.html('<em>Uploading...</em>');
@@ -910,20 +911,19 @@ $('#hydroshare-proceed').on('click', function ()  {
         return options[typeSelection];
     };
 
-    var hydroUsername = $('#hydro-username').val();
-    var hydroPassword = $('#hydro-password').val();
     var resourceAbstract = $('#resource-abstract').val();
     var resourceTitle = $('#resource-title').val();
     var resourceKeywords = $('#resource-keywords').val() ? $('#resource-keywords').val() : "";
     var resourceType = resourceTypeSwitch($('#resource-type').val());
 
-    if (!hydroPassword || !hydroUsername) {
+     if (!resourceTitle || !resourceKeywords || !resourceAbstract) {
         displayStatus.removeClass('uploading');
         displayStatus.addClass('error');
-        displayStatus.html('<em>You must enter a username and password.</em>');
+        displayStatus.html('<em>You must provide all metadata information.</em>');
         return;
     }
 
+    $(this).prop('disabled', true);
     $.ajax({
         type: 'POST',
         url: 'upload-to-hydroshare/',
@@ -933,27 +933,25 @@ $('#hydroshare-proceed').on('click', function ()  {
                 'streams_kml_filetext': streams_kml_filetext,
                 'upstream_kml_filetext': upstream_kml_filetext,
                 'downstream_kml_filetext': downstream_kml_filetext,
-                'hs_username': hydroUsername,
-                'hs_password': hydroPassword,
                 'r_title': resourceTitle,
                 'r_type': resourceType,
                 'r_abstract': resourceAbstract,
                 'r_keywords': resourceKeywords
                         },
         success: function (data) {
-            alert("Success!");
             debugger;
             $('#hydroshare-proceed').prop('disabled', false);
             if ('error' in data) {
                 displayStatus.removeClass('uploading');
                 displayStatus.addClass('error');
                 displayStatus.html('<em>' + data.error + '</em>');
-            } else {
+            }
+            else
+            {
                 displayStatus.removeClass('uploading');
                 displayStatus.addClass('success');
-
                 displayStatus.html('<em>' + data.success + ' View in HydroShare <a href="https://www.hydroshare.org/resource/' + data.newResource +
-                    '" target="_blank">here</a></em>');
+                    '" target="_blank">HERE</a></em>');
             }
         },
         error: function (jqXHR, textStatus, errorThrown) {
