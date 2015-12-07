@@ -8,7 +8,7 @@ class WatershedDelineation(TethysAppBase):
 
     name = 'EPA WATERS Services'
     index = 'watershed_delin:home'
-    icon = 'watershed_delin/images/icon.gif'
+    icon = 'watershed_delin/images/icon_1.gif'
     package = 'watershed_delin'
     root_url = 'watershed-delin'
     color = '#34495e'

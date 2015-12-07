@@ -7,11 +7,19 @@
 {% block styles %}
 {{ block.super }}
 <link href="{% static 'watershed_delin/css/main.css' %}" rel="stylesheet"/>
-<link href="{% static 'watershed_delin/vendor/bootstrap-tagsinput/bootstrap-tagsinput.css' %}" rel="stylesheet"/>
-
+<link rel="stylesheet" href="{% static 'watershed_delin/vendor/openlayers/v3.5.0-dist/ol.css' %}" type="text/css" />
+<style>
+    .ol-mouse-position {
+      top: 10px;
+      right: 40px;
+    }
+</style>
 {% endblock %}
 
 {% block app_navigation_items %}
+
+<button type="button" class="btn btn-default" data-toggle="modal" data-target="#welcome-popup">Instructions</button>
+<br><br>
 
 {% gizmo select_input select_input %}
 
@@ -23,13 +31,13 @@
 
 <hr>
 
-{% gizmo button btnDelineate %}
+{% gizmo select_input select_navigation %}
 
 <div id="delineation_output"></div>
 
-{% gizmo select_input select_navigation %}
-
 <div id="up_down_output"></div>
+
+<div id="waiting_output"></div>
 
 <hr>
 
@@ -45,17 +53,58 @@
 
 {% endblock %}
 
+{% block app_content_wrapper_override %}
+<!-- Modal  -->
+<div class="modal fade" id="welcome-popup" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title">Welcome to the EPA WATERS Services!</h4>
+            </div>
+            <div class="modal-body">
+                <div id="welcome-info">
+                    <ol>
+                        <h6>1. Select point of interest</h6>
+                        <p>Click the map or search for a location to identify a watershed outlet and stream reach of interest</p>
+                        <h6>2. Run a EPA WATERS Web Service</h6>
+                        <p>Select one option from the “EPA WATERS Service” dropdown list to run an analysis. The results will be shown on map.</p>
+                        <ul>
+                            <li>Delineate watershed</li>
+                            <li>Upstream mainstem</li>
+                            <li>Upstream with tributaries</li>
+                            <li>Downstream mainstream</li>
+                            <li>Downstream with divergences</li>
+                        </ul>
+                        <h6>3. Download Results</h6>
+                        <p>
+                           Click the "Download Results" to save results as kml files.
+                        </p>
+                        <h6>4. Upload to HydroShare</h6>
+                        <p>Click the "Upload to HydroShare" and fill out the meatadata form. </p>
+                        <h9>Note: This app uses the United States <a href='http://water.epa.gov/scitech/datait/tools/waters/services/' target="_blank">
+                                EPA WATERS Web and Database Services</a> and only
+                            works for watersheds and drainages in the continental United States and Hawaii.
+                        </h9>
+                    </ol>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" id="close-popup" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- End Modal -->
+{{block.super}}
+{% endblock %}
+
 
 {% block app_content %}
-  <p><strong>Instructions:</strong> Search for a location and/or click the map to identify a watershed outlet and stream reach of interest.
-    Then click the "Delineate Watershed" button.</p>
 
 
-{% gizmo map_view map_options %}
 
- <p><strong>Note:</strong> This app uses the United States
-    <a href='http://water.epa.gov/scitech/datait/tools/waters/services/' target="_blank">EPA WATERS Web and Database Services</a>
-    and only works for watersheds and drainages in the continental United States and Hawaii. </p>
+<div id="map"></div>
 
 <!--
 <p>Remaining Tasks:</p>
@@ -84,19 +133,6 @@
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label for="hydro-username" class="control-label">*Hydroshare Username:</label>
-                    <input type="text" class="form-control" id="hydro-username">
-                </div>
-                <div class="form-group">
-                    <label for="hydro-password" class="control-label">*Hydroshare Password:</label>
-                    <input type="password" class="form-control" id="hydro-password">
-                </div>
-                <div class="checkbox">
-                    <label>
-                        <input type="checkbox" id="credentials-checkbox">Remember me until page refresh (useful if uploading many files)
-                    </label>
-                </div>
-                <div class="form-group">
                     <label for="resource-title" class="control-label">*Resource Title:</label>
                     <input type="text" class="form-control" id="resource-title">
                 </div>
@@ -104,29 +140,28 @@
                     <label for="resource-type" class="control-label">*Resource Type:</label>
                     <select class="form-control" id="resource-type">
                         <option>Generic</option>
-                        <option>Geographic Raster</option>
-                        <option>HIS Referenced Time Series</option>
-                        <option>Model Program</option>
-                        <option>Model Instance</option>
-                        <option>Multidimensional (NetCDF)</option>
-                        <option>Time Series</option>
-                        <option>Application</option>
+                        <!--<option>Geographic Raster</option>-->
+                        <!--<option>HIS Referenced Time Series</option>-->
+                        <!--<option>Model Program</option>-->
+                        <!--<option>Model Instance</option>-->
+                        <!--<option>Multidimensional (NetCDF)</option>-->
+                        <!--<option>Time Series</option>-->
+                        <!--<option>Application</option>-->
                     </select>
                 </div>
                 <div class="form-group">
                     <label for="resource-abstract" class="control-label">*Resource Abstract:</label>
-                    <textarea rows="4" cols="50" id="resource-abstract" class="form-control"></textarea>
+                    <textarea rows="6" cols="50" id="resource-abstract" class="form-control"></textarea>
                 </div>
                 <div class="form-group">
                     <label for="resource-keywords" class="control-label">*Resource Keywords:</label>
-                    <input class="form-control" id="resource-keywords" data-role="tagsinput"
-                           placeholder="Separate each keyword with a space or comma" onchange="tagChange(event)">
+                    <input type="text" class="form-control" id="resource-keywords">
                 </div>
             </div>
             <div class="modal-footer">
                 <div id="display-status" class="col-md-8"></div>
                 <div id="footer-buttons" class="col-md-4">
-                    <button type="button" class="btn btn-default footer" data-dismiss="modal" onclick="clearUploadForm()">Close</button>
+                    <button type="button" class="btn btn-default footer" data-dismiss="modal">Close</button>
                     <button type="button" class="btn btn-primary footer" id="hydroshare-proceed">Proceed</button>
                 </div>
             </div>
@@ -138,7 +173,7 @@
   <script src="{% static 'watershed_delin/js/jquery_cookie/jquery.cookie.js' %}"></script>
   <script src="{% static 'watershed_delin/js/map.js' %}"></script>
   <script src="{% static 'watershed_delin/js/WATERSServices-1.0.0-min.js' %}"></script>
-  <script src="{% static 'watershed_delin/vendor/bootstrap-tagsinput/bootstrap-tagsinput.min.js' %}"></script>
+  <script src="{% static 'watershed_delin/vendor/openlayers/v3.5.0-dist/ol.js' %}"></script>
   <!--<script src='http://maps.google.com/maps?file=api&amp;v=2&amp;key=ABQIAAAAjpkAC9ePGem0lIq5XcMiuhR_wWLPFku8Ix9i2SXYRVK3e45q1BQUd_beF8dtzKET_EteAjPdGDwqpQ'></script>-->
      <script type="text/javascript"
              src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDPgvDUpbEwcbg9C0cRTfDtDa-Vj4WBwI0">

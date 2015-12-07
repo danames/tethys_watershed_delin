@@ -381,7 +381,7 @@ WATERS.Helpers.GetBaseURL = function() {
 WATERS.Helpers.GetWATERSURL = function() {
   
    var baseURL = WATERS.Helpers.GetBaseURL();
-   var defaultURL = 'http://www.epa.gov/';
+   var defaultURL = 'https://www.epa.gov/';
 
    if ( baseURL.slice(-13) == '.appspot.com/' )
       return defaultURL;
@@ -414,7 +414,7 @@ WATERS.Helpers.FetchWaitingImage = function(keyword) {
        str_keyword = str_keyword + '.gif';
     }
     
-    if ( str_keyword.slice(0,7) == 'http://' ) {
+    if ( str_keyword.slice(0,7) == 'https://' ) {
        results = str_keyword;
     } else {
        results = WATERS.Helpers.GetWATERSURL() + 'waters/styles/waiting/' + str_keyword; 

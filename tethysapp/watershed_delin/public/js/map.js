@@ -3,18 +3,22 @@ var map, start_point_layer, click_point_layer, end_point_layer, indexing_path_la
 var basin_layer, streams_layer;
 var upstream_layer, downstream_layer;
 var flag_geocoded;
-var resAbstr, upAbstract, downAbstract;
+var resLoc, resAbstr, upAbstract, downAbstract;
+var resKwds,upKwds,downKwds;
 var USRivers;
 var baseMapLayer=null;
 
 //variables related to the delineation process
 var comid, fmeasure, reach_code, gnis_name, wbd_huc12;
 var displayStatus = $('#display-status');
+var popupDiv = $('#welcome-popup');
 
 $(document).ready(function () {
     //hide the delineate and download buttons at first
+
+    popupDiv.modal('show');
+
     hide_buttons();
-    $('#resource-keywords').tagsinput({confirmKeys: [32, 44]});
     /*    var esri = new ol.layer.Tile({
         source: new ol.source.XYZ({
             attribution: [new ol.Attribution({
@@ -31,7 +35,23 @@ $(document).ready(function () {
     dropdown_obj=document.getElementById("select_input");
     dropdown_obj.selectedIndex=0;
 
-    map = TETHYS_MAP_VIEW.getMap();
+    //map = TETHYS_MAP_VIEW.getMap();
+
+
+    kansas_city_lonlat = [-94.5783, 39.0997]
+    kansas_city_3857 = ol.proj.transform(kansas_city_lonlat, 'EPSG:4326', 'EPSG:3857');
+
+    map = new ol.Map({
+	layers: [ ],
+	controls: ol.control.defaults(),
+	target: 'map',
+	view: new ol.View({
+		center: kansas_city_3857,
+		zoom: 8,
+        projection: "EPSG:3857"
+	})
+    });
+
 
     //remove the default openstreetmap that Tethys adds.
     map.getLayers().clear();
@@ -73,7 +93,8 @@ $(document).ready(function () {
                             .replace('{x}', tileCoord[1].toString())
                             .replace('{y}', tileCoord[2].toString());
             }
-            })
+            }),
+        maxResolution: 1000 // layer shows up when current view is greater than this scale (1:1000), like 1:800
         })
 
     click_point_layer = new ol.layer.Vector({
@@ -264,13 +285,14 @@ $(document).ready(function () {
 
     find_current_location();
 
-    map.getView().setZoom(4);
+    map.getView().setZoom(5);
 
     map.on('click', function(evt) {
         flag_geocoded=false;
         var coordinate = evt.coordinate;
         addClickPoint(coordinate);
-
+        $("#select_navigation")[0][0].selected = true;
+        hide_buttons();
         var lonlat = ol.proj.transform(coordinate, 'EPSG:3857', 'EPSG:4326');
 
         //Each time the user clicks on the map, let's run the point
@@ -344,11 +366,13 @@ function addClickPoint(coordinates){
 }
 
 function hide_buttons() {
-    document.getElementById("btnDelineate").style.visibility="hidden";
+    //document.getElementById("btnDelineate").style.visibility="hidden";
     document.getElementById("select_navigation").style.visibility="hidden";
     document.getElementById("btnDownload").style.visibility="hidden";
     document.getElementById("btnUpload").style.visibility="hidden";
     document.getElementById("delineation_output").innerHTML="";
+    document.getElementById("up_down_output").innerHTML="";
+    document.getElementById("waiting_output").innerHTML = '';
 }
 
 function clear_location_layers() {
@@ -445,9 +469,10 @@ function pis_success(result, textStatus) {
     }
 
     //turn on the delineate button and turn off the download button and clear delin results
-    document.getElementById("btnDelineate").style.visibility="visible";
+    //document.getElementById("btnDelineate").style.visibility="visible";
     document.getElementById("select_navigation").style.visibility="visible";
     document.getElementById("delineation_output").innerHTML="";
+    document.getElementById("up_down_output").innerHTML="";
 
     var coord = end_point_layer.getSource().getFeatures()[0].getGeometry().getCoordinates();
     var LLcoord = ol.proj.transform(coord,'EPSG:3857','EPSG:4326');
@@ -456,7 +481,6 @@ function pis_success(result, textStatus) {
         //reverse geocode our click point so the search box isn't empty
         reverse_geocode(LLcoord);
     }
-
 
     //get a little closer if we are zoomed way out.
     if (map.getView().getZoom()<12) {
@@ -500,6 +524,25 @@ function geojson2feature(myGeoJSON) {
 
 }
 
+
+var value_selected;
+
+function select_function(){
+    dropdown_obj=document.getElementById("select_navigation");
+    selected_index=dropdown_obj.selectedIndex;
+    value_selected=dropdown_obj.options[selected_index].value;
+
+    if (value_selected == "select"){
+        return;
+    }
+    else if (value_selected == "DeWa"){
+        run_navigation_delineation_service();
+    }
+    else{
+        run_upstream_service();
+    }
+}
+
 function run_navigation_delineation_service(){
     var options = {
         "success": "nds_success",
@@ -519,15 +562,14 @@ function run_navigation_delineation_service(){
         "optNHDPlusDataset": "2.1"
     };
 
-    waiting_nds();
+     waiting_output();
     rtnStr = WATERS.Services.NavigationDelineationService(data, options);
     //this will start the service. If it succeeds, it will call nds_success.
 }
 
-
 function nds_success(result, textStatus) {
 
-   document.getElementById("delineation_output").innerHTML = '';
+   document.getElementById("waiting_output").innerHTML = '';
 
     var srv_rez = result.output;
 
@@ -568,12 +610,19 @@ function nds_success(result, textStatus) {
             ', HUC 12 = ' + wbd_huc12 + '. Delineation Results: Watershed Area = ' + basin_area + ' sq-km. ' +
             'Stream Segments = ' + stream_count +'.';
 
+        resKwds = resLoc+', Watershed, Delineation';
+
         if( upstream_layer.getSource().getFeatures().length> 0){
             $('#resource-abstract').val(resAbstr+upAbstract);
+            $('#resource-keywords').val(resKwds+', '+upKwds);
+
         }else if(downstream_layer.getSource().getFeatures().length> 0){
-            $('#resource-abstract').val(resAbstr+downAbstract);}
-        else{
-            $('#resource-abstract').val(resAbstr);}
+            $('#resource-abstract').val(resAbstr+downAbstract);
+            $('#resource-keywords').val(resKwds+', '+downKwds);
+        }else{
+            $('#resource-abstract').val(resAbstr);
+            $('#resource-keywords').val(resKwds);}
+
 
         document.getElementById("delineation_output").innerHTML = success_text;
         document.getElementById("btnDownload").style.visibility="visible";
@@ -585,6 +634,7 @@ function nds_success(result, textStatus) {
 }
 
 function nds_error(XMLHttpRequest, textStatus, errorThrown) {
+    document.getElementById("waiting_output").innerHTML = '';
     report_failed_delineation(textStatus);
 }
 
@@ -592,18 +642,9 @@ function report_failed_delineation(textMessage) {
     document.getElementById("delineation_output").innerHTML = "<strong>Delineation Error:</strong><br>" + textMessage;
 }
 
-
 //function of upstream service
 
 function run_upstream_service(){
-
-    dropdown_obj=document.getElementById("select_navigation");
-    selected_index=dropdown_obj.selectedIndex;
-    selected_value=dropdown_obj.options[selected_index].value;
-
-    if (selected_value == "select"){
-        return;
-    }
 
     var options = {
         "success": "us_success",
@@ -613,7 +654,7 @@ function run_upstream_service(){
     };
 
     var data = {
-        "pNavigationType": selected_value,
+        "pNavigationType": value_selected,
         "pStartComid": comid,
         "pStartMeasure": fmeasure,
         "pTraversalSummary" : "TRUE",
@@ -622,14 +663,14 @@ function run_upstream_service(){
         "optNHDPlusDataset": "2.1"
     };
 
-    waiting_us();
+    waiting_output();
     rtnStr = WATERS.Services.UpstreamDownstreamService(data, options);
     //this will start the service. If it succeeds, it will call us_success.
 }
 
 function us_success(result, textStatus) {
 
-    document.getElementById("up_down_output").innerHTML = '';
+    document.getElementById("waiting_output").innerHTML = '';
 
     var srv_rez = result.output;
 
@@ -650,39 +691,67 @@ function us_success(result, textStatus) {
 
         var srv_fl  = result.output.flowlines_traversed;
 
-        if (selected_value == "UT" ||selected_value == "UM"){
-            for ( i in result.output.flowlines_traversed) {
+        if (selected_value == "UT" ||selected_value == "UM") {
+            for (i in result.output.flowlines_traversed) {
                 upstream_layer.getSource().addFeature(geojson2feature(result.output.flowlines_traversed[i].shape));
             }
             var stream_count = upstream_layer.getSource().getFeatures().length;
-            var success_text = "<strong>Results:</strong><br>" +
-                            "Stream Segments = " + stream_count;
+            var success_text = "<strong>Upstream Results:</strong><br>" +
+                "Stream Segments = " + stream_count;
             map.getView().fitExtent(upstream_layer.getSource().getExtent(), map.getSize());
 
             upAbstract = 'This resource contains automatically created kml file representing upstream of this point '
-                +'queried by the EPA Waters Service using the Tethys EPA Waters Service web app. '+ 'Upstream Results: '
-                +'Stream Segments = ' + stream_count +'.';
+                + 'queried by the EPA Waters Service using the Tethys EPA Waters Service web app. ' + 'Upstream Results: '
+                + 'Stream Segments = ' + stream_count + '.';
 
-            if( basin_layer.getSource().getFeatures().length> 0){
-                $('#resource-abstract').val(resAbstr+upAbstract);
-            }else{
-                $('#resource-abstract').val(upAbstract);}
-        }else{
+            if (selected_value == "UT") {
+                upKwds = 'Upstream, Tributaries';
+            } else {
+                upKwds = 'Upstream, Mainstem';
+            }
+
+            if (basin_layer.getSource().getFeatures().length > 0) {
+                $('#resource-abstract').val(resAbstr + upAbstract);
+                $('#resource-keywords').val(resKwds + ', ' + upKwds)
+            }
+            else
+            {
+                $('#resource-abstract').val(upAbstract);
+                $('#resource-keywords').val(resLoc + ', ' + upKwds);
+            }
+        }
+        else
+        {
             for ( i in result.output.flowlines_traversed) {
                 downstream_layer.getSource().addFeature(geojson2feature(result.output.flowlines_traversed[i].shape));
             }
             var stream_count = downstream_layer.getSource().getFeatures().length;
-            var success_text = "<strong>Results:</strong><br>" +
+            var success_text = "<strong>Downstream Results:</strong><br>" +
                             "Stream Segments = " + stream_count;
 
             downAbstract = 'This resource contains automatically created kml file representing downstream of this point '
                 +'queried by the EPA Waters Service using the Tethys EPA Waters Service web app. '+ 'Downstream Results: '
                 +'Stream Segments = ' + stream_count +'.';
 
-            if( basin_layer.getSource().getFeatures().length> 0){
+            if (selected_value=="DM")
+            {
+                downKwds='Downstream, Mainstem';
+            }
+            else
+            {
+                downKwds='Downstream, Divergences';
+            }
+
+            if( basin_layer.getSource().getFeatures().length> 0)
+            {
                 $('#resource-abstract').val(resAbstr+downAbstract);
-            }else{
-                $('#resource-abstract').val(downAbstract);}
+                $('#resource-keywords').val(resKwds+', '+downKwds);
+            }
+            else
+            {
+                $('#resource-abstract').val(downAbstract);
+                $('#resource-keywords').val(resLoc + ', ' + downKwds)
+            }
 
             map.getView().fitExtent(downstream_layer.getSource().getExtent(), map.getSize());
         }
@@ -696,6 +765,7 @@ function us_success(result, textStatus) {
 }
 
 function us_error(XMLHttpRequest, textStatus, errorThrown) {
+    document.getElementById("waiting_output").innerHTML = '';
     report_failed_upstream(textStatus);
 
 }
@@ -749,8 +819,10 @@ function reverse_geocode_success(results, status) {
             location = gnis_name + ", " + location;
         }
         document.getElementById("txtLocation").value = location;
+        resLoc = location.split(",")[0];
         var resourceTitle = 'Watershed at '+ location;
         $('#resource-title').val(resourceTitle);
+
     } else {
         document.getElementById("txtLocation").value = "Location Not Available";
     }
@@ -796,38 +868,6 @@ function download_features(filename, features) {
 }
 
 
-//This function is attached as an 'onclick' tag to the popup modal button button in home.html
-function clearUploadForm() {
-    if (!($('#credentials-checkbox').is(":checked"))) {
-        $('#hydro-username').val('');
-        $('#hydro-password').val('');
-    }
-    $('#resource-title').val('');
-    $('#resource-abstract').val('');
-    $('#resource-keywords')
-        .val('')
-        .tagsinput('removeAll');
-    displayStatus
-        .removeClass('error uploading success')
-        .empty();
-}
-
-function tagChange(event) { //added to $('#resource-keywords') as an 'onclick' function in home.html
-    var inputElement = $('.bootstrap-tagsinput').children('input');
-    var itemClicked = event.target || event.srcElement;
-    var itemId = itemClicked.id;
-    var jqueryIdCall = '#' + itemId;
-    if ($(jqueryIdCall).val() == "") {
-        inputElement.attr('placeholder', 'Separate each keyword with a space or comma');
-        inputElement.attr('style', 'width: 47em !important');
-    } else {
-        inputElement.removeAttr('placeholder');
-        inputElement.attr('style','width: 6em !important');
-
-    }
-}
-
-
 //Upload basin and streams kml file to hydroshare
 
 var csrftoken = $.cookie('csrftoken');
@@ -853,7 +893,7 @@ $('#hydroshare-proceed').on('click', function ()  {
     var upstream_kml_filetext = kmlformat.writeFeatures(upstream_layer.getSource().getFeatures(), {'dataProjection':'EPSG:4326','featureProjection': 'EPSG:3857'});
     var downstream_kml_filetext = kmlformat.writeFeatures(downstream_layer.getSource().getFeatures(), {'dataProjection':'EPSG:4326','featureProjection': 'EPSG:3857'});
 
-    $(this).prop('disabled', true);
+
     displayStatus.removeClass('error');
     displayStatus.addClass('uploading');
     displayStatus.html('<em>Uploading...</em>');
@@ -871,20 +911,19 @@ $('#hydroshare-proceed').on('click', function ()  {
         return options[typeSelection];
     };
 
-    var hydroUsername = $('#hydro-username').val();
-    var hydroPassword = $('#hydro-password').val();
     var resourceAbstract = $('#resource-abstract').val();
     var resourceTitle = $('#resource-title').val();
     var resourceKeywords = $('#resource-keywords').val() ? $('#resource-keywords').val() : "";
     var resourceType = resourceTypeSwitch($('#resource-type').val());
 
-    if (!hydroPassword || !hydroUsername) {
+     if (!resourceTitle || !resourceKeywords || !resourceAbstract) {
         displayStatus.removeClass('uploading');
         displayStatus.addClass('error');
-        displayStatus.html('<em>You must enter a username and password.</em>');
+        displayStatus.html('<em>You must provide all metadata information.</em>');
         return;
     }
 
+    $(this).prop('disabled', true);
     $.ajax({
         type: 'POST',
         url: 'upload-to-hydroshare/',
@@ -894,27 +933,25 @@ $('#hydroshare-proceed').on('click', function ()  {
                 'streams_kml_filetext': streams_kml_filetext,
                 'upstream_kml_filetext': upstream_kml_filetext,
                 'downstream_kml_filetext': downstream_kml_filetext,
-                'hs_username': hydroUsername,
-                'hs_password': hydroPassword,
                 'r_title': resourceTitle,
                 'r_type': resourceType,
                 'r_abstract': resourceAbstract,
                 'r_keywords': resourceKeywords
                         },
         success: function (data) {
-            alert("Success!");
             debugger;
             $('#hydroshare-proceed').prop('disabled', false);
             if ('error' in data) {
                 displayStatus.removeClass('uploading');
                 displayStatus.addClass('error');
                 displayStatus.html('<em>' + data.error + '</em>');
-            } else {
+            }
+            else
+            {
                 displayStatus.removeClass('uploading');
                 displayStatus.addClass('success');
-
-                displayStatus.html('<em>' + data.success + ' View in HydroShare <a href="https://alpha.hydroshare.org/resource/' + data.newResource +
-                    '" target="_blank">here</a></em>');
+                displayStatus.html('<em>' + data.success + ' View in HydroShare <a href="https://www.hydroshare.org/resource/' + data.newResource +
+                    '" target="_blank">HERE</a></em>');
             }
         },
         error: function (jqXHR, textStatus, errorThrown) {
@@ -929,21 +966,14 @@ $('#hydroshare-proceed').on('click', function ()  {
     });
 });
 
-
 function waiting_pis() {
     var wait_text = "<strong>Loading...</strong><br>" +
         "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='/static/watershed_delin/images/earth_globe.gif'>";
     document.getElementById('search_output').innerHTML = wait_text;
 }
 
-function waiting_nds() {
+function waiting_output() {
     var wait_text = "<strong>Loading...</strong><br>" +
         "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='/static/watershed_delin/images/earth_globe.gif'>";
-    document.getElementById('delineation_output').innerHTML = wait_text;
-}
-
-function waiting_us() {
-    var wait_text = "<strong>Loading...</strong><br>" +
-        "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='/static/watershed_delin/images/earth_globe.gif'>";
-    document.getElementById('up_down_output').innerHTML = wait_text;
+    document.getElementById('waiting_output').innerHTML = wait_text;
 }
