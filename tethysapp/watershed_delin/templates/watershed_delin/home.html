@@ -13,6 +13,22 @@
       top: 10px;
       right: 40px;
     }
+
+    #byu-logo-container {
+    float: left;
+    position: absolute;
+    bottom: 8px;
+    }
+    #byu-logo-container img {
+    float: left;
+    height: 50px;
+    width: 50px;
+    }
+    #byu-logo-container span {
+    position: relative;
+    top: 25px;
+    margin-left: 10px;
+    }
 </style>
 {% endblock %}
 
@@ -65,10 +81,15 @@
             <div class="modal-body">
                 <div id="welcome-info">
                     <ol>
-                        <h6>1. Select point of interest</h6>
+                        <p>Welcome to the HydroShare EPA Waters Services Web App. This app allows you to perform various navigation and data exploration tasks
+                            on the NHD Plus data set using web services provided by the United States Environmental Protection Agency.
+                            A full description of the web services used by this app is available <a href="http://www.epa.gov/waterdata/waters-web-services">here</a>.
+                        </p>
+                        <h6>Instructions:</h6>
+                        <h7>1. Select point of interest</h7>
                         <p>Click the map or search for a location to identify a watershed outlet and stream reach of interest</p>
-                        <h6>2. Run a EPA WATERS Web Service</h6>
-                        <p>Select one option from the “EPA WATERS Service” dropdown list to run an analysis. The results will be shown on map.</p>
+                        <h7>2. Run a EPA WATERS Web Service</h7>
+                        <p>Select one option from the "EPA WATERS Service" dropdown list to run an analysis. The results will be shown on map. Options include:</p>
                         <ul>
                             <li>Delineate watershed</li>
                             <li>Upstream mainstem</li>
@@ -76,20 +97,25 @@
                             <li>Downstream mainstream</li>
                             <li>Downstream with divergences</li>
                         </ul>
-                        <h6>3. Download Results</h6>
+                        <br>
+                        <h7>3. Download Results</h7>
                         <p>
-                           Click the "Download Results" to save results as kml files.
+                           Click the "Download Results" to save results as KML files that can be viewed in Google Earth or other KML enabled applications.
                         </p>
-                        <h6>4. Upload to HydroShare</h6>
-                        <p>Click the "Upload to HydroShare" and fill out the meatadata form. </p>
-                        <h9>Note: This app uses the United States <a href='http://water.epa.gov/scitech/datait/tools/waters/services/' target="_blank">
-                                EPA WATERS Web and Database Services</a> and only
+                        <h7>4. Upload to HydroShare</h7>
+                        <p>Click the "Upload to HydroShare" and fill out the metadata form. Uploading your results to HydroShare creates
+                            a permanent HydroShare resource that can be directly retrieved and used later without having to re-run this app.</p>
+                        <h9>Note: This app uses the United States EPA WATERS Web and Database Services and only
                             works for watersheds and drainages in the continental United States and Hawaii.
                         </h9>
                     </ol>
                 </div>
             </div>
             <div class="modal-footer">
+                 <div id="byu-logo-container">
+                    <span><i>Developed at the BYU Hydroinformatics Lab</i></span>
+                    <img src="{% static 'watershed_delin/images/byu-logo.png' %}"/>
+                </div>
                 <button type="button" class="btn btn-default" id="close-popup" data-dismiss="modal">Close</button>
             </div>
         </div>

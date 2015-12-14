@@ -83,7 +83,8 @@ $(document).ready(function () {
         })
     });
 
-    var urlTemplate = 'http://141.142.168.31/arcgis/rest/services/hydro/NFIEGeoNational_flowline/MapServer/tile/{z}/{y}/{x}';
+    // var urlTemplate = 'http://141.142.168.50/arcgis/rest/services/hydro/NFIEGeoNational_flowline/MapServer/tile/{z}/{y}/{x}';
+    var urlTemplate = 'https://cgmap1.ncsa.illinois.edu/arcgis/rest/services/hydro/NFIEGeoNational_flowline/MapServer/tile/{z}/{y}/{x}';
 
     USRivers = new ol.layer.Tile({
         source: new ol.source.XYZ({
