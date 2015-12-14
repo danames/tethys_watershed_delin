@@ -13,6 +13,22 @@
       top: 10px;
       right: 40px;
     }
+
+    #byu-logo-container {
+    float: left;
+    position: absolute;
+    bottom: 8px;
+    }
+    #byu-logo-container img {
+    float: left;
+    height: 50px;
+    width: 50px;
+    }
+    #byu-logo-container span {
+    position: relative;
+    top: 25px;
+    margin-left: 10px;
+    }
 </style>
 {% endblock %}
 
@@ -96,6 +112,10 @@
                 </div>
             </div>
             <div class="modal-footer">
+                 <div id="byu-logo-container">
+                    <span><i>Developed at the BYU Hydroinformatics Lab</i></span>
+                    <img src="{% static 'watershed_delin/images/byu-logo.png' %}"/>
+                </div>
                 <button type="button" class="btn btn-default" id="close-popup" data-dismiss="modal">Close</button>
             </div>
         </div>
