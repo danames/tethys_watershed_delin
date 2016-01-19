@@ -16,6 +16,9 @@ var popupDiv = $('#welcome-popup');
 $(document).ready(function () {
     //hide the delineate and download buttons at first
 
+    if (document.referrer == "https://apps.hydroshare.org/apps/") {
+        $('#extra-buttons').append('<a class="btn btn-default" href="https://apps.hydroshare.org/apps/">Return to HydroShare Apps</a>');
+    }
     popupDiv.modal('show');
 
     hide_buttons();
