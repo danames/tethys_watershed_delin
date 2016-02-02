@@ -12,6 +12,7 @@ class WatershedDelineation(TethysAppBase):
     package = 'watershed_delin'
     root_url = 'watershed-delin'
     color = '#34495e'
+    description =   'This app allows you to perform various navigation and data exploration tasks on the NHD Plus data set using web services provided by the United States Environmental Protection Agency'
         
     def url_maps(self):
         """

@@ -13,7 +13,6 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from social_auth.models import UserSocialAuth
 from django.conf import settings
 
 
