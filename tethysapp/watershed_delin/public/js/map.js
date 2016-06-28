@@ -60,13 +60,12 @@ $(document).ready(function () {
     map.getLayers().clear();
 
     //build the bing map layer
-	bing_layer = new ol.layer.Tile({
-
-		source: new ol.source.BingMaps({
-			imagerySet: 'AerialWithLabels',
-			key: 'Ak-dzM4wZjSqTlzveKz5u0d4IQ4bRzVI309GxmkgSVr1ewS6iPSrOvOKhA-CJlm3'
-		})
-	});
+    bing_layer = new ol.layer.Tile({
+            source: new ol.source.BingMaps({
+                imagerySet: 'AerialWithLabels',
+                key: 'SFpNe1Al6IDxInoiI7Ta~LX-BVFN0fbUpmO4hIUm3ZA~AsJ3XqhA_0XVG1SUun4_ibqrBVYJ1XaYJdYUuHGqVCPOM71cx-3FS2FzCJCa2vIh'
+            })
+        });
 
     //build OpenStreet map layer
     openstreet_layer = new ol.layer.Tile({
