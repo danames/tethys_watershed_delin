@@ -152,3 +152,51 @@ def upload_to_hydroshare(request):
                 shutil.rmtree(temp_dir)
         print return_json
         return JsonResponse(return_json)
+
+#############################################################################
+
+
+def abc():
+    return 50
+
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def pywps_handler(request):
+    import pywps
+    from pywps.Exceptions import WPSException, NoApplicableCode
+    from django.http import HttpResponse
+
+    wps_process_folder_path = "/home/sherry/pywps/tests/processes"
+    pycfg_path = "/home/sherry/pywps/tests/pywps.cfg"
+
+    request_method = request.method
+    if request_method.lower() == "get":
+        inputQuery = request.META['QUERY_STRING']
+    else:
+        inputQuery = request._stream.stream  # wsgi.input
+
+    try:
+        if not inputQuery:
+            raise NoApplicableCode("No query string found.")
+
+        wps = pywps.Pywps(request_method, pycfg_path)
+
+        data_size = None
+        if request_method.lower() == "post":
+            data_size = request._stream.remaining
+
+        if wps.parseRequest(inputQuery, data_size=data_size):
+            pywps.debug(wps.inputs)
+            wps.performRequest(processes=wps_process_folder_path)
+            response_headers = [('Content-type', wps.request.contentType)]
+            response = wps.response
+
+
+    except WPSException, e:
+        response = str(e)
+    except Exception, e:
+        response = str(e)
+    finally:
+        print response
+        return HttpResponse(response, content_type='text/xml')
