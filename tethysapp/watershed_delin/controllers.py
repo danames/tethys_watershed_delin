@@ -113,6 +113,7 @@ def upload_to_hydroshare(request):
                 resource_id = hs.addResourceFile(basin_resource_id, downstream_kml_file_path)
                 return_json['success'] = 'File uploaded successfully!'
                 return_json['newResource'] = resource_id
+                return_json['hs_domain'] = hs.hostname
             else:
                 raise
 
