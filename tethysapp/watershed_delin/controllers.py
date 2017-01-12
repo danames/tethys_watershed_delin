@@ -1,23 +1,21 @@
-import sys
 import tempfile
 import shutil
 import os
 import traceback
+import logging
 
-from tethys_gizmos.gizmo_options import MapView, MVLayer, MVView
-from tethys_apps.sdk.gizmos import Button, TextInput, SelectInput
-from hs_restclient import HydroShare, HydroShareAuthBasic
+from tethys_sdk.gizmos import Button, TextInput, SelectInput
 from oauthlib.oauth2 import TokenExpiredError
-from hs_restclient import HydroShare, HydroShareAuthOAuth2, HydroShareNotAuthorized, HydroShareNotFound
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from django.conf import settings
 
-
-hs_hostname = "www.hydroshare.org"
-
+logger = logging.getLogger(__name__)
+try:
+    from tethys_services.backends.hs_restclient_helper import get_oauth_hs
+except ImportError:
+    logger.error("could not load: tethys_services.backends.hs_restclient_helper import get_oauth_hs")
 
 @login_required
 def home(request):
@@ -34,10 +32,10 @@ def home(request):
                             attributes="id=selectInput onchange=run_select_basemap()")
 
     txtLocation = TextInput(display_text='Location Search:',
-                    name="txtLocation",
-                    initial="",
-                    disabled=False,
-                    attributes="onkeypress=handle_search_key(event);")
+                            name="txtLocation",
+                            initial="",
+                            disabled=False,
+                            attributes="onkeypress=handle_search_key(event);")
 
     btnSearch = Button(display_text="Search",
                         name="btnSearch",
@@ -58,20 +56,6 @@ def home(request):
                'select_navigation': select_navigation
             }
     return render(request, 'watershed_delin/home.html', context)
-
-
-def getOAuthHS(request):
-
-    client_id = getattr(settings, "SOCIAL_AUTH_HYDROSHARE_KEY", "None")
-    client_secret = getattr(settings, "SOCIAL_AUTH_HYDROSHARE_SECRET", "None")
-
-    # this line will throw out from django.core.exceptions.ObjectDoesNotExist if current user is not signed in via HydroShare OAuth
-    token = request.user.social_auth.get(provider='hydroshare').extra_data['token_dict']
-    auth = HydroShareAuthOAuth2(client_id, client_secret, token=token)
-    hs = HydroShare(auth=auth, hostname=hs_hostname)
-
-    return hs
-
 
 @login_required
 def upload_to_hydroshare(request):
@@ -95,7 +79,8 @@ def upload_to_hydroshare(request):
             # startup a Hydroshare instance with user's credentials
             # auth = HydroShareAuthBasic(username=hs_username, password=hs_password)
             # hs = HydroShare(auth=auth, hostname="www.hydroshare.org", use_https=True)
-            hs = getOAuthHS(request)
+            #hs = getOAuthHS(request)
+            hs = get_oauth_hs(request)
 
             #download the kml file to a temp directory
             temp_dir = tempfile.mkdtemp()
@@ -128,17 +113,18 @@ def upload_to_hydroshare(request):
                 resource_id = hs.addResourceFile(basin_resource_id, downstream_kml_file_path)
                 return_json['success'] = 'File uploaded successfully!'
                 return_json['newResource'] = resource_id
+                return_json['hs_domain'] = hs.hostname
             else:
                 raise
 
     except ObjectDoesNotExist as e:
-        print ("1231")
-        print str(e)
+        logger.exception(e.message)
         return_json['error'] = 'Login timed out! Please re-sign in with your HydroShare account.'
     except TokenExpiredError as e:
-        print str(e)
+        logger.exception(e.message)
         return_json['error'] = 'Login timed out! Please re-sign in with your HydroShare account.'
     except Exception, err:
+        logger.exception(err.message)
         if "401 Unauthorized" in str(err):
             return_json['error'] = 'Username or password invalid.'
         elif "400 Bad Request" in str(err):
@@ -150,5 +136,5 @@ def upload_to_hydroshare(request):
         if temp_dir != None:
             if os.path.exists(temp_dir):
                 shutil.rmtree(temp_dir)
-        print return_json
+        logger.debug(return_json)
         return JsonResponse(return_json)
