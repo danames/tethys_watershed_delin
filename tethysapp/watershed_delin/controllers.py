@@ -4,7 +4,7 @@ import os
 import traceback
 import logging
 
-from tethys_apps.sdk.gizmos import Button, TextInput, SelectInput
+from tethys_sdk.gizmos import Button, TextInput, SelectInput
 from oauthlib.oauth2 import TokenExpiredError
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import JsonResponse
