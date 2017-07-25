@@ -34,6 +34,9 @@ $(document).ready(function () {
     });
 
 */
+
+
+
     //Set basemap dropdownbox initial display as 'Bing'
     dropdown_obj=document.getElementById("select_input");
     dropdown_obj.selectedIndex=0;
@@ -86,19 +89,38 @@ $(document).ready(function () {
     });
 
     // var urlTemplate = 'http://141.142.168.50/arcgis/rest/services/hydro/NFIEGeoNational_flowline/MapServer/tile/{z}/{y}/{x}';
-    var urlTemplate = 'https://cgmap1.ncsa.illinois.edu/arcgis/rest/services/hydro/NFIEGeoNational_flowline/MapServer/tile/{z}/{y}/{x}';
+
+    var urlTemplate = 'https://geoserver.byu.edu/arcgis/rest/services/NWM/nwm_channel_v10/MapServer/tile/{z}/{y}/{x}';
+    //var urlTemplate = 'https://cgmap1.ncsa.illinois.edu/arcgis/rest/services/hydro/NFIEGeoNational_flowline/MapServer/tile/{z}/{y}/{x}';
+
+    // USRivers = new ol.layer.Tile({
+    //     source: new ol.source.XYZ({
+    //         tilesize : 256,
+    //         tileUrlFunction: function(tileCoord) {
+    //         return urlTemplate.replace('{z}', tileCoord[0].toString())
+    //                         .replace('{x}', tileCoord[1].toString())
+    //                         .replace('{y}', tileCoord[2].toString());
+    //         }
+    //         }),
+    //     maxResolution: 1000 // layer shows up when current view is greater than this scale (1:1000), like 1:800
+    //     });
+
+
+    var stream_Source = new ol.source.TileWMS({
+        url: 'https://geoserver.byu.edu/arcgis/services/NWM/nwm_channel_v10/MapServer/WmsServer?',
+        params: {
+            LAYERS: "0"
+        },
+        //see: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/img#attr-crossorigin
+        //http://openlayers.org/en/v3.12.1/apidoc/ol.source.TileWMS.html
+        crossOrigin: 'anonymous' //This is necessary for CORS security in the browser
+
+    });
 
     USRivers = new ol.layer.Tile({
-        source: new ol.source.XYZ({
-            tilesize : 256,
-            tileUrlFunction: function(tileCoord) {
-            return urlTemplate.replace('{z}', tileCoord[0].toString())
-                            .replace('{x}', tileCoord[1].toString())
-                            .replace('{y}', tileCoord[2].toString());
-            }
-            }),
-        maxResolution: 1000 // layer shows up when current view is greater than this scale (1:1000), like 1:800
-        })
+        source: stream_Source,
+        keyword: "reservoir"
+    });
 
     click_point_layer = new ol.layer.Vector({
         source: new ol.source.Vector(),
@@ -117,7 +139,7 @@ $(document).ready(function () {
                 })
             })
         })
-    })
+    });
 
     start_point_layer = new ol.layer.Vector({
         source: new ol.source.Vector(),
@@ -276,6 +298,7 @@ $(document).ready(function () {
     baseMapLayer=bing_layer;
     map.addLayer(baseMapLayer);
     map.addLayer(USRivers);
+
     map.addLayer(click_point_layer);
     map.addLayer(start_point_layer);
     map.addLayer(end_point_layer);
@@ -844,20 +867,21 @@ function handle_search_key(e) {
 function run_download_results() {
     //Download sasin and streams features
     if(basin_layer.getSource().getFeatures().length != 0) {
-        download_features("basin.kml", basin_layer.getSource().getFeatures());
+        download_features_as_kml("basin.kml", basin_layer.getSource().getFeatures());
+        download_features_as_geojson("basin.geojson", basin_layer.getSource().getFeatures());
     }
     if(streams_layer.getSource().getFeatures().length != 0) {
-        download_features("streams.kml", streams_layer.getSource().getFeatures());
+        download_features_as_kml("streams.kml", streams_layer.getSource().getFeatures());
     }
     if(upstream_layer.getSource().getFeatures().length != 0) {
-        download_features("upstream.kml", upstream_layer.getSource().getFeatures());
+        download_features_as_kml("upstream.kml", upstream_layer.getSource().getFeatures());
     }
     if(downstream_layer.getSource().getFeatures().length != 0) {
-        download_features("downstream.kml", downstream_layer.getSource().getFeatures());
+        download_features_as_kml("downstream.kml", downstream_layer.getSource().getFeatures());
     }
 }
 
-function download_features(filename, features) {
+function download_features_as_kml(filename, features) {
     //This function only works on HTML5 browsers.
     var kmlformat = new ol.format.KML();
     var filetext = kmlformat.writeFeatures(features, {'dataProjection':'EPSG:4326','featureProjection': 'EPSG:3857'});
@@ -870,6 +894,19 @@ function download_features(filename, features) {
     document.body.removeChild(element);
 }
 
+
+function download_features_as_geojson(filename, features)
+{
+    var geojsonformat = new ol.format.GeoJSON();
+    var filetext = geojsonformat.writeFeatures(features, {'dataProjection':'EPSG:4326','featureProjection': 'EPSG:3857'});
+    var element = document.createElement('a');
+    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(filetext));
+    element.setAttribute('download', filename);
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+}
 
 //Upload basin and streams kml file to hydroshare
 
@@ -892,9 +929,12 @@ $('#hydroshare-proceed').on('click', function ()  {
            //This function only works on HTML5 browsers.
     var kmlformat = new ol.format.KML();
     var basin_kml_filetext = kmlformat.writeFeatures(basin_layer.getSource().getFeatures(), {'dataProjection': 'EPSG:4326', 'featureProjection': 'EPSG:3857'});
+
     var streams_kml_filetext = kmlformat.writeFeatures(streams_layer.getSource().getFeatures(), {'dataProjection':'EPSG:4326','featureProjection': 'EPSG:3857'});
     var upstream_kml_filetext = kmlformat.writeFeatures(upstream_layer.getSource().getFeatures(), {'dataProjection':'EPSG:4326','featureProjection': 'EPSG:3857'});
     var downstream_kml_filetext = kmlformat.writeFeatures(downstream_layer.getSource().getFeatures(), {'dataProjection':'EPSG:4326','featureProjection': 'EPSG:3857'});
+    var geojsonformat = new ol.format.GeoJSON();
+    var basin_geojson_filetext = geojsonformat.writeFeatures(basin_layer.getSource().getFeatures(), {'dataProjection': 'EPSG:4326', 'featureProjection': 'EPSG:3857'});
 
 
     displayStatus.removeClass('error');
@@ -933,6 +973,7 @@ $('#hydroshare-proceed').on('click', function ()  {
         dataType:'json',
         data: {
                 'basin_kml_filetext': basin_kml_filetext,
+                'basin_geojson_filetext': basin_geojson_filetext,
                 'streams_kml_filetext': streams_kml_filetext,
                 'upstream_kml_filetext': upstream_kml_filetext,
                 'downstream_kml_filetext': downstream_kml_filetext,

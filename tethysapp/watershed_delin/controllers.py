@@ -67,6 +67,7 @@ def upload_to_hydroshare(request):
             get_data = request.POST
 
             basin_kml_filetext = str(get_data['basin_kml_filetext'])
+            basin_geojson_filetext = str(get_data['basin_geojson_filetext'])
             streams_kml_filetext = str(get_data['streams_kml_filetext'])
             upstream_kml_filetext = str(get_data['upstream_kml_filetext'])
             downstream_kml_filetext = str(get_data['downstream_kml_filetext'])
@@ -86,6 +87,7 @@ def upload_to_hydroshare(request):
             temp_dir = tempfile.mkdtemp()
 
             basin_kml_file_path = os.path.join(temp_dir, "basin.kml")
+            basin_geojson_file_path = os.path.join(temp_dir, "basin.geojson")
             streams_kml_file_path = os.path.join(temp_dir, "streams.kml")
             upstream_kml_file_path = os.path.join(temp_dir, "upstream.kml")
             downstream_kml_file_path = os.path.join(temp_dir, "downstream.kml")
@@ -93,6 +95,9 @@ def upload_to_hydroshare(request):
 
             with open(basin_kml_file_path, 'w') as fd:
                         fd.write(basin_kml_filetext)
+
+            with open(basin_geojson_file_path, 'w') as fd:
+                fd.write(basin_geojson_filetext)
 
             with open(streams_kml_file_path, 'w') as fd:
                     fd.write(streams_kml_filetext)
@@ -109,6 +114,7 @@ def upload_to_hydroshare(request):
                 basin_resource_id = hs.createResource(r_type, r_title, resource_file=basin_kml_file_path,
                                                       keywords=r_keywords, abstract=r_abstract)
                 resource_id = hs.addResourceFile(basin_resource_id, streams_kml_file_path)
+                resource_id = hs.addResourceFile(basin_resource_id, basin_geojson_file_path)
                 resource_id = hs.addResourceFile(basin_resource_id, upstream_kml_file_path)
                 resource_id = hs.addResourceFile(basin_resource_id, downstream_kml_file_path)
                 return_json['success'] = 'File uploaded successfully!'
