@@ -4,6 +4,11 @@ import os
 import traceback
 import logging
 
+import osgeo.osr as osr
+import osgeo.ogr as ogr
+import geojson
+import json
+
 from tethys_sdk.gizmos import Button, TextInput, SelectInput
 from oauthlib.oauth2 import TokenExpiredError
 from django.core.exceptions import ObjectDoesNotExist
@@ -64,6 +69,7 @@ def upload_to_hydroshare(request):
     try:
         return_json = {}
         if request.method == 'POST':
+            temp_dir = tempfile.mkdtemp()
             get_data = request.POST
 
             basin_kml_filetext = str(get_data['basin_kml_filetext'])
@@ -71,6 +77,49 @@ def upload_to_hydroshare(request):
             streams_kml_filetext = str(get_data['streams_kml_filetext'])
             upstream_kml_filetext = str(get_data['upstream_kml_filetext'])
             downstream_kml_filetext = str(get_data['downstream_kml_filetext'])
+
+            shape_file_created = False
+            if basin_geojson_filetext:
+
+                geojson_obj = geojson.loads(basin_geojson_filetext)
+
+                geojson_geom_first = geojson_obj
+                if geojson_obj.type.lower() == "featurecollection":
+                    geojson_geom_first = geojson_obj.features[0].geometry
+                watershed_geometry = ogr.CreateGeometryFromJson(json.dumps(geojson_geom_first))
+                # print watershed_geometry.GetGeometryType()
+
+                shpfile_name = "basin"
+                # generate shapefile
+                watershed_shpfile_path = os.path.join(temp_dir, shpfile_name)
+
+                driver = ogr.GetDriverByName("ESRI Shapefile")
+                # create the data source
+                data_source = driver.CreateDataSource(watershed_shpfile_path)
+                # create the spatial reference, WGS84
+                srs = osr.SpatialReference()
+                srs.ImportFromEPSG(4326)
+                # create the layer
+                layer = data_source.CreateLayer("basin", srs, ogr.wkbMultiPolygon)
+                feature = ogr.Feature(layer.GetLayerDefn())
+
+                # Set the feature geometry using the point
+                feature.SetGeometry(watershed_geometry)
+                # Create the feature in the layer (shapefile)
+                layer.CreateFeature(feature)
+
+                # Destroy the feature to free resources
+                feature.Destroy()
+                # Destroy the data source to free resources
+                data_source.Destroy()
+
+                watershed_shp_path = watershed_shpfile_path + "/" + shpfile_name + ".shp"
+                watershed_shx_path = watershed_shpfile_path + "/" + shpfile_name + ".shx"
+                watershed_dbf_path = watershed_shpfile_path + "/" + shpfile_name + ".dbf"
+                watershed_prj_path = watershed_shpfile_path + "/" + shpfile_name + ".prj"
+                shape_file_created = True
+
+
             r_title = str(get_data['r_title'])
             r_type = str(get_data['r_type'])
             r_abstract = str(get_data['r_abstract'])
@@ -82,9 +131,6 @@ def upload_to_hydroshare(request):
             # hs = HydroShare(auth=auth, hostname="www.hydroshare.org", use_https=True)
             #hs = getOAuthHS(request)
             hs = get_oauth_hs(request)
-
-            #download the kml file to a temp directory
-            temp_dir = tempfile.mkdtemp()
 
             basin_kml_file_path = os.path.join(temp_dir, "basin.kml")
             basin_geojson_file_path = os.path.join(temp_dir, "basin.geojson")
@@ -117,6 +163,14 @@ def upload_to_hydroshare(request):
                 resource_id = hs.addResourceFile(basin_resource_id, basin_geojson_file_path)
                 resource_id = hs.addResourceFile(basin_resource_id, upstream_kml_file_path)
                 resource_id = hs.addResourceFile(basin_resource_id, downstream_kml_file_path)
+                if shape_file_created:
+                    resource_id = hs.addResourceFile(basin_resource_id, watershed_shp_path)
+                    resource_id = hs.addResourceFile(basin_resource_id, watershed_shx_path)
+                    resource_id = hs.addResourceFile(basin_resource_id, watershed_prj_path)
+                    resource_id = hs.addResourceFile(basin_resource_id, watershed_dbf_path)
+
+
+
                 return_json['success'] = 'File uploaded successfully!'
                 return_json['newResource'] = resource_id
                 return_json['hs_domain'] = hs.hostname
